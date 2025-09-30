@@ -9,3 +9,9 @@
 
 #Object files
 *.o
+
+#ELF files
+*.elf
+
+#Bash history
+.bash_history

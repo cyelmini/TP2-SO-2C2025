@@ -59,17 +59,6 @@ char *cpuVendor(char *result);
 void getTime(uint8_t * h, uint8_t * m, uint8_t * s);
 
 /**
- * @brief Reproduce un sonido en el speaker
- * @param  freq: Frecuencia del sonido
- */
-void startSound(uint64_t freq);
-
-/**
- * @brief Apaga el speaker
- */
-void stopSound();
-
-/**
  * @brief Realiza un snapshot de los registros en un momento arbitrario
  */
 void saveRegisters();

@@ -49,16 +49,6 @@ void setFontSize(uint8_t size);
 uint32_t getScreenResolution();
 
 /**
- * @brief  Dibuja un rectangulo
- * @param  x: Origen en x 
- * @param  y: Origen en y 
- * @param  width: Ancho
- * @param  height: Alto
- * @param  color: Color de relleno
- */
-void drawRect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, Color color);
-
-/**
  * @brief Devuelve la cantidad de ticks actuales
  * @return Cantidad de ticks
  */
@@ -70,13 +60,6 @@ uint64_t getTicks();
  * @param vec: Vector en el cual se llena la informacion
  */
 void getMemory(uint64_t pos, uint8_t * vec);
-
-/**
- * @brief Reproduce un sonido
- * @param frequency: Frecuencia del sonido
- * @param ticks: Cantidad de ticks que se desea que dure el sonido
- */
-void playSound(uint64_t frequency, uint64_t ticks);
 
 /**
  * @brief Ejecuta una excepcion de Invalid Opcode Exception

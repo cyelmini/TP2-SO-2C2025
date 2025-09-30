@@ -5,10 +5,8 @@ GLOBAL clear
 GLOBAL getInfoReg
 GLOBAL setFontSize
 GLOBAL getScreenResolution
-GLOBAL drawRect
 GLOBAL getTicks
 GLOBAL getMemory
-GLOBAL playSound
 GLOBAL kaboom
 GLOBAL setFontColor
 GLOBAL getFontColor
@@ -48,33 +46,22 @@ getScreenResolution:
     int 80h
     ret
 
-drawRect:
-    mov rax, 7
-    mov r10, rcx
-    int 80h
-    ret
-
 getTicks:
-    mov rax, 8
+    mov rax, 7
     int 80h
     ret
 
 getMemory:
-    mov rax, 9
-    int 80h
-    ret
-
-playSound:
-    mov rax, 10
+    mov rax, 8
     int 80h
     ret
 
 setFontColor:
-    mov rax, 11
+    mov rax, 9
     int 80h
     ret
 
 getFontColor:
-    mov rax, 12
+    mov rax, 10
     int 80h
     ret

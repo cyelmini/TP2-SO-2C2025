@@ -4,7 +4,6 @@
 #include <shell.h>
 #include <stdint.h>
 #include <syscalls.h>
-#include <tron.h>
 #include <man.h>
 #include <libasm.h>
 
@@ -38,8 +37,6 @@ static void man(char * command);
 static void printInfoReg();
 static void time();
 static int div(char * num, char * div);
-static void tron();
-static void tronZen();
 static void fontSize(char * size);
 static void printMem(char * pos);
 static int getCommandIndex(char * command);
@@ -53,11 +50,9 @@ void init() {
     commands[3] = (Command){"time", "Despliega la hora actual UTC - 3", .f = (void*) &time, NO_PARAMS};
     commands[4] = (Command){ "div", "Hace la division entera de dos numeros naturales enviados por parametro", .h = (void*) &div, DUAL_PARAM};
     commands[5] = (Command){ "kaboom", "Ejecuta una excepcion de Invalid Opcode", .f = (void*) &kaboom, NO_PARAMS};
-    commands[6] = (Command){ "tron", "Juego Tron Light Cycles", .f = (void*) &tron, NO_PARAMS};
-    commands[7] = (Command){ "tron-zen", "Juego Tron Light Cycles con un unico jugador", .f = (void*) &tronZen, NO_PARAMS};
-    commands[8] = (Command){ "font-size", "Cambio de dimensiones de la fuente. Para hacerlo escribir el comando seguido de un numero", .g = (void*) &fontSize, SINGLE_PARAM};
-    commands[9] = (Command){ "printmem", "Realiza un vuelco de memoria de los 32 bytes posteriores a una direccion de memoria en formato hexadecimal enviada por parametro", .g = (void*) &printMem, SINGLE_PARAM};
-    commands[10] = (Command){ "clear", "Limpia toda la pantalla", .f = (void*) &clear, NO_PARAMS};
+    commands[6] = (Command){ "font-size", "Cambio de dimensiones de la fuente. Para hacerlo escribir el comando seguido de un numero", .g = (void*) &fontSize, SINGLE_PARAM};
+    commands[7] = (Command){ "printmem", "Realiza un vuelco de memoria de los 32 bytes posteriores a una direccion de memoria en formato hexadecimal enviada por parametro", .g = (void*) &printMem, SINGLE_PARAM};
+    commands[8] = (Command){ "clear", "Limpia toda la pantalla", .f = (void*) &clear, NO_PARAMS};
 }
 
 void run_shell() {
@@ -136,19 +131,6 @@ static void fontSize(char * size) {
         puts(CHECK_MAN_FONT);
     }
 }
-
-static void tron(){
-    setFontSize(2);
-    startTron(2);
-    setFontSize(1);
-}
-
-static void tronZen(){
-    setFontSize(2);
-    startTron(1);
-    setFontSize(1);
-}
-
 
 static void printMem(char * pos){
     uint8_t resp[QTY_BYTES];
