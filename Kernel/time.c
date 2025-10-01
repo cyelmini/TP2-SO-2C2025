@@ -1,5 +1,5 @@
-#include <time.h>
 #include <stdint.h>
+#include <time.h>
 static uint64_t ticks = 0;
 
 void timerHandler() {

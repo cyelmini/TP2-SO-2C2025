@@ -3,7 +3,7 @@
 #define QTY_COMMANDS 9
 /**
  * @brief Corre la terminal
- * 
+ *
  */
 void run_shell();
 #endif

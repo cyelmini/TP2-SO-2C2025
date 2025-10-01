@@ -1,8 +1,8 @@
 #ifndef _SYSCALLS_H
 #define _SYSCALLS_H
 
-#include <stdint.h>
 #include <color.h>
+#include <stdint.h>
 
 /**
  * @brief Escribe a partir del descriptor recibido un caracter
@@ -30,11 +30,11 @@ uint32_t getSeconds();
 void clear(void);
 
 /**
- * @brief 
+ * @brief
  * @param regarr: Vector donde se llena la informacion de los registros
  * @return Puntero a la informacion de los registros
  */
-uint64_t * getInfoReg(uint64_t * regarr);
+uint64_t *getInfoReg(uint64_t *regarr);
 
 /**
  * @brief Cambia el tamaño de la fuente
@@ -44,7 +44,7 @@ void setFontSize(uint8_t size);
 
 /**
  * @brief Devuelve las dimensiones de la pantalla
- * @return 32 bits menos significativos el ancho, 32 el alto 
+ * @return 32 bits menos significativos el ancho, 32 el alto
  */
 uint32_t getScreenResolution();
 
@@ -56,10 +56,10 @@ uint64_t getTicks();
 
 /**
  * @brief Llena un vector con 32 bytes de informacion a partir de una direccion de memoria en hexa
- * @param pos: Direccion de memoria a partir de la cual se llena el vector 
+ * @param pos: Direccion de memoria a partir de la cual se llena el vector
  * @param vec: Vector en el cual se llena la informacion
  */
-void getMemory(uint64_t pos, uint8_t * vec);
+void getMemory(uint64_t pos, uint8_t *vec);
 
 /**
  * @brief Ejecuta una excepcion de Invalid Opcode Exception
@@ -76,7 +76,7 @@ void setFontColor(uint8_t r, uint8_t g, uint8_t b);
 
 /**
  * @brief Retorna el color de fuente que se esta usando actualmente
- * @return Color 
+ * @return Color
  */
 Color getFontColor();
 #endif
