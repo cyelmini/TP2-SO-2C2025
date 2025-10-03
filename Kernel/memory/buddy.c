@@ -45,7 +45,6 @@ static void splitTree(uint64_t node);
 static void setSplitedChildren(uint64_t node);
 
 MemoryManagerADT mm_create(void *const restrict startAddress, uint64_t totalSize) {
-	/* Determine a usable max exponent for this manager based on totalSize */
 	if (totalSize < POW2(MIN_EXP)) {
 		return NULL;
 	}
@@ -57,7 +56,6 @@ MemoryManagerADT mm_create(void *const restrict startAddress, uint64_t totalSize
 
 	uint64_t nodes = ((uint64_t) 1 << (computedMax - MIN_EXP + 1)) - 1;
 
-	/* Ensure the provided region is large enough for the manager and the tree */
 	uint64_t needed = sizeof(MemoryManagerCDT) + (nodes * sizeof(Node)) + POW2(MIN_EXP);
 	if (totalSize < needed) {
 		return NULL;
@@ -65,17 +63,13 @@ MemoryManagerADT mm_create(void *const restrict startAddress, uint64_t totalSize
 
 	uint8_t *base = (uint8_t *) startAddress;
 	memoryBaseAddress = (MemoryManagerADT) base;
-	MemoryManagerADT manager = (MemoryManagerADT) memoryBaseAddress; // manager stored at region start
+	MemoryManagerADT manager = (MemoryManagerADT) memoryBaseAddress; 
 
-	/* Layout: [MemoryManagerCDT][tree array][heap region]
-	 * tree immediately follows the manager struct, heap follows the tree.
-	 */
 	manager->maxExp = computedMax;
 	manager->totalNodes = nodes;
 	manager->tree = (TNode) (base + sizeof(MemoryManagerCDT));
 	manager->treeStart = base + sizeof(MemoryManagerCDT) + (nodes * sizeof(Node));
 
-	/* Available heap size is totalSize minus space used by struct + tree */
 	manager->size = totalSize - (sizeof(MemoryManagerCDT) + (nodes * sizeof(Node)));
 	manager->used = 0;
 
@@ -104,7 +98,6 @@ void *mm_alloc(size_t size) {
 	manager->used += POW2(exponent);
 	uint64_t offset = (uint64_t) (nodo - getNodeLevel(exponent)) * POW2(exponent);
 	if (offset >= manager->size) {
-		/* allocation would be out of heap bounds */
 		return NULL;
 	}
 	return (void *) (manager->treeStart + offset);

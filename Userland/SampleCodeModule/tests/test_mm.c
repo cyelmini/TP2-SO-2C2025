@@ -17,7 +17,7 @@ uint64_t test_mm(uint64_t argc, char *argv[]) {
 	uint64_t max_memory;
 
 	if (argc != 1) {
-		printf("ERROR: cantidad de argumentos\n");
+		printf("ERROR: debe ingresar los bytes de memoria a asignar\n");
 		return -1;
 	}
 

@@ -3,6 +3,7 @@
 #include <moduleLoader.h>
 #include <stdint.h>
 #include <video.h>
+#include <memoryManagement.h>
 
 extern uint8_t text;
 extern uint8_t rodata;
@@ -15,8 +16,10 @@ static const uint64_t PageSize = 0x1000;
 
 static void *const sampleCodeModuleAddress = (void *) 0x400000;
 static void *const sampleDataModuleAddress = (void *) 0x500000;
+static void * const memoryManagerModuleAddress = (void*)0x600000;
 
 typedef int (*EntryPoint)();
+MemoryManagerADT memoryManager;
 
 void clearBSS(void *bssAddress, uint64_t bssSize) {
 	memset(bssAddress, 0, bssSize);
@@ -32,6 +35,7 @@ void initializeKernelBinary() {
 	void *moduleAddresses[] = {sampleCodeModuleAddress, sampleDataModuleAddress};
 	loadModules(&endOfKernelBinary, moduleAddresses);
 	clearBSS(&bss, &endOfKernel - &bss);
+	memoryManager = mm_create(memoryManagerModuleAddress, HEAP_SIZE);
 }
 
 int main() {
