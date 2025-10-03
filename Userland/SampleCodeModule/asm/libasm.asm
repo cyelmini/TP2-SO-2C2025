@@ -1,6 +1,7 @@
 EXTERN printRegisters
 GLOBAL usrGetInfoReg
 GLOBAL kaboom
+
 ; Para obtener los valores de los registros en tiempo real, usar esta funcion
 usrGetInfoReg:
 	push rax

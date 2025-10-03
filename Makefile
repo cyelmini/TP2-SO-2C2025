@@ -5,7 +5,7 @@ bootloader:
 	cd Bootloader; make all
 
 kernel:
-	cd Kernel; make all
+	cd Kernel; make all MM_TYPE=$(MM_TYPE)
 
 userland:
 	cd Userland; make all

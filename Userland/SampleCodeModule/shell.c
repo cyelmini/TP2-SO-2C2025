@@ -1,3 +1,4 @@
+#include "tests.h"
 #include <libasm.h>
 #include <man.h>
 #include <shell.h>
@@ -14,7 +15,7 @@ typedef enum { NO_PARAMS = 0, SINGLE_PARAM, DUAL_PARAM } functionType;
 #define MIN_FONT_SIZE 1
 #define MAX_FONT_SIZE 3
 
-#define WELCOME "Bienvenido a Cactiland OS!\n"
+#define WELCOME "¡Bienvenido al mejor Sistema Operativo del mundo!\n"
 #define INVALID_COMMAND "Comando invalido!\n"
 #define WRONG_PARAMS "La cantidad de parametros ingresada es invalida\n"
 #define INVALID_FONT_SIZE "Dimension invalida de fuente\n"
@@ -39,53 +40,75 @@ static void time();
 static int div(char *num, char *div);
 static void fontSize(char *size);
 static void printMem(char *pos);
+static void testmem(char *maxMemory);
 static int getCommandIndex(char *command);
 
 static Command commands[QTY_COMMANDS];
 
 void init() {
 	commands[0] = (Command) {"help", "Listado de comandos", .f = (void *) &help, NO_PARAMS};
+
 	commands[1] = (Command) {"man", "Manual de uso de los comandos", .g = (void *) &man, SINGLE_PARAM};
+
 	commands[2] = (Command) {
 		"inforeg",
 		"Informacion de los registos que fueron capturados en un momento arbitrario de ejecucion del sistema",
 		.f = (void *) &printInfoReg, NO_PARAMS};
+
 	commands[3] = (Command) {"time", "Despliega la hora actual UTC - 3", .f = (void *) &time, NO_PARAMS};
+
 	commands[4] = (Command) {"div", "Hace la division entera de dos numeros naturales enviados por parametro",
 							 .h = (void *) &div, DUAL_PARAM};
+
 	commands[5] = (Command) {"kaboom", "Ejecuta una excepcion de Invalid Opcode", .f = (void *) &kaboom, NO_PARAMS};
+
 	commands[6] = (Command) {
 		"font-size", "Cambio de dimensiones de la fuente. Para hacerlo escribir el comando seguido de un numero",
 		.g = (void *) &fontSize, SINGLE_PARAM};
+
 	commands[7] = (Command) {"printmem",
 							 "Realiza un vuelco de memoria de los 32 bytes posteriores a una direccion de memoria en "
 							 "formato hexadecimal enviada por parametro",
 							 .g = (void *) &printMem, SINGLE_PARAM};
+
 	commands[8] = (Command) {"clear", "Limpia toda la pantalla", .f = (void *) &clear, NO_PARAMS};
+
+	commands[9] = (Command) {"testmem", "Ejecuta un test del administrador de memoria",
+							 .g = (void *) &testmem, SINGLE_PARAM};
 }
 
 void run_shell() {
 	init();
+
 	int index;
+
 	puts(WELCOME);
+
 	while (1) {
 		putchar('>');
+
 		char command[MAX_CHARS] = {0};
 		char arg1[MAX_CHARS];
 		char arg2[MAX_CHARS];
+
 		int qtyParams = scanf("%s %s %s", command, arg1, arg2);
+
 		index = getCommandIndex(command);
+
 		if (index == -1) {
 			if (command[0] != 0)
 				printErr(INVALID_COMMAND);
 			continue;
 		}
+
 		int funcParams = commands[index].ftype;
+
 		if (qtyParams - 1 != funcParams) {
 			printErr(WRONG_PARAMS);
 			printf(CHECK_MAN, command);
 			continue;
 		}
+
 		switch (commands[index].ftype) {
 			case NO_PARAMS:
 				commands[index].f();
@@ -155,16 +178,32 @@ static char *_regNames[] = {"RIP", "RSP", "RAX", "RBX", "RCX", "RDX", "RBP", "RD
 							"R8",  "R9",  "R10", "R11", "R12", "R13", "R14", "R15"};
 static void printInfoReg() {
 	int len = sizeof(_regNames) / sizeof(char *);
+
 	uint64_t regSnapshot[len];
+
 	getInfoReg(regSnapshot);
-	for (int i = 0; i < len; i++)
+	for (int i = 0; i < len; i++) {
 		printf("%s: 0x%x\n", _regNames[i], regSnapshot[i]);
+	}
 }
 
 static void man(char *command) {
 	int idx = getCommandIndex(command);
-	if (idx != -1)
+	if (idx != -1) {
 		printf("%s\n", usages[idx]);
-	else
+	}
+	else {
 		printErr(INVALID_COMMAND);
+	}
+}
+
+static void testmem(char *maxMemory) {
+	char *argv[1] = {maxMemory};
+	uint64_t result = test_mm(1, argv);
+	if (result == 0) {
+		printf("Test del memory manager completado exitosamente\n");
+	}
+	else {
+		printf("Test del memory manager fallo con codigo: %lu\n", result);
+	}
 }

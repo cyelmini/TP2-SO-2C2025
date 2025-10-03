@@ -25,31 +25,61 @@ typedef struct Node {
 typedef struct Node *TNode;
 
 typedef struct MemoryManagerCDT {
-	uint8_t treeStart;
+	uint8_t *treeStart;
 	TNode tree;
 	uint64_t size;
 	uint64_t used;
+	uint8_t maxExp;
+	uint64_t totalNodes;
 } MemoryManagerCDT;
 
 static MemoryManagerADT memoryBaseAddress = NULL;
 
+static int64_t getNodeIndex(uint8_t *ptr, uint8_t *exponent);
+static uint8_t getExponentPtr(void *memoryToFree);
+static uint8_t getExponent(uint64_t size);
+static int64_t findFreeNode(uint64_t node, uint8_t level, uint8_t targetLevel);
+static uint64_t getNodeLevel(uint8_t exponent);
+static void setMerge(uint64_t node);
+static void splitTree(uint64_t node);
+static void setSplitedChildren(uint64_t node);
+
 MemoryManagerADT mm_create(void *const restrict startAddress, uint64_t totalSize) {
+	/* Determine a usable max exponent for this manager based on totalSize */
 	if (totalSize < POW2(MIN_EXP)) {
 		return NULL;
 	}
 
-	memoryBaseAddress = startAddress;
-	MemoryManagerADT manager =
-		(MemoryManagerADT) memoryBaseAddress; // En startAdress se guarda la informacion del struct en si
+	uint8_t computedMax = MIN_EXP;
+	while (((uint64_t) 1 << (computedMax + 1)) <= (totalSize) && computedMax < 63) {
+		computedMax++;
+	}
 
-	manager->treeStart = startAddress + sizeof(MemoryManagerCDT); // Por lo que +sizeof, se empieza a guardar el arbol
-	manager->tree =
-		(TNode) (manager->treeStart +
-				 HEAP_SIZE); // El mismo concepto para todos los nodos, luego de la direccion inicial del arbol
-	manager->size = HEAP_SIZE;
+	uint64_t nodes = ((uint64_t) 1 << (computedMax - MIN_EXP + 1)) - 1;
+
+	/* Ensure the provided region is large enough for the manager and the tree */
+	uint64_t needed = sizeof(MemoryManagerCDT) + (nodes * sizeof(Node)) + POW2(MIN_EXP);
+	if (totalSize < needed) {
+		return NULL;
+	}
+
+	uint8_t *base = (uint8_t *) startAddress;
+	memoryBaseAddress = (MemoryManagerADT) base;
+	MemoryManagerADT manager = (MemoryManagerADT) memoryBaseAddress; // manager stored at region start
+
+	/* Layout: [MemoryManagerCDT][tree array][heap region]
+	 * tree immediately follows the manager struct, heap follows the tree.
+	 */
+	manager->maxExp = computedMax;
+	manager->totalNodes = nodes;
+	manager->tree = (TNode) (base + sizeof(MemoryManagerCDT));
+	manager->treeStart = base + sizeof(MemoryManagerCDT) + (nodes * sizeof(Node));
+
+	/* Available heap size is totalSize minus space used by struct + tree */
+	manager->size = totalSize - (sizeof(MemoryManagerCDT) + (nodes * sizeof(Node)));
 	manager->used = 0;
 
-	for (uint64_t i = 0; i < TOTAL_NODES; i++) {
+	for (uint64_t i = 0; i < manager->totalNodes; i++) {
 		manager->tree[i].state = FREE;
 	}
 
@@ -66,25 +96,32 @@ void *mm_alloc(size_t size) {
 		return NULL;
 	}
 	uint8_t exponent = getExponent(size);
-	int64_t nodo = findFreeNode(0, 0, MAX_EXP - exponent);
+	int64_t nodo = findFreeNode(0, 0, manager->maxExp - exponent);
 	if (nodo == -1)
 		return NULL;
 	splitTree(nodo);
 	setSplitedChildren(nodo);
-	manager->used += POW_2(exponent);
-	return (void *) (manager->treeStart + (nodo - getNodeLevel(exponent)) * POW_2(exponent));
+	manager->used += POW2(exponent);
+	uint64_t offset = (uint64_t) (nodo - getNodeLevel(exponent)) * POW2(exponent);
+	if (offset >= manager->size) {
+		/* allocation would be out of heap bounds */
+		return NULL;
+	}
+	return (void *) (manager->treeStart + offset);
 }
 
-void freeMemory(void *const restrict memoryToFree) {
+void mm_free(void *const restrict memoryToFree) {
 	MemoryManagerADT manager = getMemoryManager();
 	if (memoryToFree == NULL) {
 		return;
 	}
 	uint8_t exponent = getExponentPtr(memoryToFree);
-	uint8_t nodo = getNodeIndex(memoryToFree, &exponent);
+	int64_t nodo = getNodeIndex((uint8_t *) memoryToFree, &exponent);
+	if (nodo < 0)
+		return;
 	manager->tree[nodo].state = FREE;
 	setMerge(nodo);
-	manager->used -= POW_2(exponent);
+	manager->used -= POW2(exponent);
 }
 
 static int64_t getNodeIndex(uint8_t *ptr, uint8_t *exponent) {
@@ -92,7 +129,13 @@ static int64_t getNodeIndex(uint8_t *ptr, uint8_t *exponent) {
 	int64_t node = 0;
 	uint8_t levelExponent = *exponent;
 	while (levelExponent > 0 && manager->tree[node].state != USED) {
-		node = (*(ptr - manager->treeStart) >> levelExponent) + getNodeLevel(levelExponent); //
+		/* compute offset in bytes from treeStart, then shift by levelExponent */
+		if ((uintptr_t) ptr < (uintptr_t) manager->treeStart)
+			return -1;
+		uint64_t offset = (uint64_t) ((uintptr_t) ptr - (uintptr_t) manager->treeStart);
+		if (offset >= manager->size)
+			return -1;
+		node = (int64_t) ((offset >> levelExponent) + getNodeLevel(levelExponent));
 		levelExponent--;
 	}
 	*exponent = levelExponent;
@@ -101,9 +144,11 @@ static int64_t getNodeIndex(uint8_t *ptr, uint8_t *exponent) {
 
 static uint8_t getExponentPtr(void *memoryToFree) {
 	MemoryManagerADT manager = getMemoryManager();
-	uint64_t address = (uint8_t *) memoryToFree - manager->treeStart;
-	uint8_t exponent = MAX_EXP;
-	uint64_t size = POW_2(MAX_EXP);
+	if ((uintptr_t) memoryToFree < (uintptr_t) manager->treeStart)
+		return 0;
+	uint64_t address = (uint64_t) ((uintptr_t) memoryToFree - (uintptr_t) manager->treeStart);
+	uint8_t exponent = manager->maxExp;
+	uint64_t size = POW2(manager->maxExp);
 	while (address % size != 0) {
 		exponent--;
 		size >>= 1;
@@ -139,7 +184,8 @@ static int64_t findFreeNode(uint64_t node, uint8_t level, uint8_t targetLevel) {
 }
 
 static uint64_t getNodeLevel(uint8_t exponent) {
-	return (POW_2(MAX_EXP - exponent) - 1);
+	MemoryManagerADT manager = getMemoryManager();
+	return (POW2((uint64_t) manager->maxExp - exponent) - 1);
 }
 
 static void setMerge(uint64_t node) {
@@ -155,13 +201,13 @@ static void setMerge(uint64_t node) {
 	}
 	else {
 		buddy = node + 1;
-		if (buddy >= TOTAL_NODES)
+		if (buddy >= manager->totalNodes)
 			return;
 	}
 
-	if (manager->tree[buddy].state == FREE && manager->tree[node].state == FREE) {
+	if (buddy < manager->totalNodes && manager->tree[buddy].state == FREE && manager->tree[node].state == FREE) {
 		uint64_t parent = (node - 1) / 2;
-		if (parent < TOTAL_NODES && manager->tree[parent].state == SPLIT) {
+		if (parent < manager->totalNodes && manager->tree[parent].state == SPLIT) {
 			manager->tree[parent].state = FREE;
 			setMerge(parent);
 		}
@@ -178,7 +224,7 @@ static void splitTree(uint64_t node) {
 
 static void setSplitedChildren(uint64_t node) {
 	MemoryManagerADT manager = getMemoryManager();
-	if (node < TOTAL_NODES) {
+	if (node < manager->totalNodes) {
 		manager->tree[node].state = USED;
 	}
 }

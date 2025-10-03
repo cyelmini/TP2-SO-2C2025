@@ -1,5 +1,8 @@
 {
     "files.associations": {
-        "memorymanagement.h": "c"
+        "memorymanagement.h": "c",
+        "test_utils.h": "c",
+        "string.h": "c",
+        "stdio.h": "c"
     }
 }

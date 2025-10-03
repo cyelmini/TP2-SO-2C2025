@@ -2,6 +2,8 @@
 #define _SYSCALLS_H
 
 #include <color.h>
+#include <shared.h>
+#include <stddef.h>
 #include <stdint.h>
 
 /**
@@ -79,4 +81,27 @@ void setFontColor(uint8_t r, uint8_t g, uint8_t b);
  * @return Color
  */
 Color getFontColor();
+
+/**
+ * @brief Reserva memoria dinámica dentro del heap administrado
+ *
+ * @param size Cantidad de bytes a reservar
+ * @return void* Puntero al bloque asignado, o NULL si no hay espacio
+ */
+void *mm_alloc(size_t size);
+
+/**
+ * @brief Libera un bloque previamente asignado
+ *
+ * @param ptr Puntero devuelto por mm_alloc(), ignora NULL
+ */
+void mm_free(void *const restrict ptr);
+
+/**
+ * @brief Obtiene informacion del heap administrado
+ *
+ * @param info Puntero donde se escribirá la información del heap
+ */
+void mm_info(mem_t *info);
+
 #endif
