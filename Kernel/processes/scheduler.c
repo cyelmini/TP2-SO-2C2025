@@ -1,12 +1,11 @@
 #include <stdint.h>
-#include <doubleLinkedList.h>
-#include <memoryManager.h>
+#include <../include/doubleLinkedList.h>
 #include <scheduler.h>
-#include <process.h>
+#include <../include/process.h>
 #include <lib.h>
 
-#define MAX_PROCESS 20 //nidea tenemos que poner un numero real
-#define MIN_QUANTUM 1
+#define MAX_PROCESS 30 //nidea tenemos que poner un numero real
+#define MIN_QUANTUMS 1
 
 typedef struct schedulerCDT {
 	doubleLinkedListADT processList;
@@ -14,11 +13,13 @@ typedef struct schedulerCDT {
 	doubleLinkedListADT blockedProcess;
 	int16_t currentPid;
 	int16_t nextPid;
-	PCB *currentProcess;
+	ProcessContext *currentProcess;
 	uint16_t processQty;
 	int quantums;
     uint64_t globalTicks; // para aging de prioridad
 } schedulerCDT;
+
+typedef struct schedulerCDT *schedulerADT;
 
 schedulerADT scheduler = NULL;
 
@@ -38,7 +39,10 @@ void createScheduler() {
     scheduler->quantums = MIN_QUANTUMS;
 	scheduler->globalTicks = 0;
 
-	//faltaria aca hacer el createProcess del primer proceso
+	//.        IDLE.       // --> proceso al pedo que salva a la cpu de ejecutar basura si no hay ningun proceso READY
+	char *argsIdle[1] = {"idle"};
+	int16_t fileDescriptors[] = {-1, -1, STDERR};
+	//createProcess((uint64_t) idle, argsIdle, 1, 1, fileDescriptors, 1);
 }
 
 int16_t createProcess(){
