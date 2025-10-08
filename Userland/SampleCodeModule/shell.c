@@ -1,4 +1,5 @@
 #include "tests.h"
+#include "test_utils.h"
 #include <libasm.h>
 #include <man.h>
 #include <shell.h>
@@ -78,6 +79,7 @@ void init() {
 }
 
 void run_shell() {
+
 	init();
 
 	int index;
@@ -85,6 +87,7 @@ void run_shell() {
 	puts(WELCOME);
 
 	while (1) {
+
 		putchar('>');
 
 		char command[MAX_CHARS] = {0};
@@ -198,12 +201,17 @@ static void man(char *command) {
 }
 
 static void testmem(char *maxMemory) {
+	int memVal = satoi(maxMemory);
+	if(memVal <= 0){
+		printf("El numero de memoria es invalido. Debe ser un numero positivo.\n");
+		return;
+	}
 	char *argv[1] = {maxMemory};
 	uint64_t result = test_mm(1, argv);
+	
 	if (result == 0) {
-		printf("Test del memory manager completado exitosamente\n");
-	}
-	else {
-		printf("Test del memory manager fallo con codigo: %lu\n", result);
+		printf("El test del memory manager fue completado exitosamente.\n");
+	} else {
+		printf("El test del memory manager fallo con codigo: %d\n", result);
 	}
 }

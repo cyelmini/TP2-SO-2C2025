@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #define HEAP_SIZE (256 * 1024 * 1024)
+#define POW2(x) ((uint64_t) 1 << (x))
 
 /**
  * Información general del estado del heap.

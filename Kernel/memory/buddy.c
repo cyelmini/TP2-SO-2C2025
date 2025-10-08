@@ -13,10 +13,8 @@
 #define FREE 0
 #define USED 1
 #define SPLIT 2
-#define POW2(x) ((uint64_t) 1 << (x))
 #define MIN_EXP 4
 #define MAX_EXP 28
-#define TOTAL_NODES (POW2(MAX_EXP - MIN_EXP + 1) - 1)
 
 typedef struct Node {
 	uint8_t state;
@@ -50,7 +48,7 @@ MemoryManagerADT mm_create(void *const restrict startAddress, uint64_t totalSize
 	}
 
 	uint8_t computedMax = MIN_EXP;
-	while (((uint64_t) 1 << (computedMax + 1)) <= (totalSize) && computedMax < 63) {
+	while (((uint64_t) 1 << (computedMax + 1)) <= (totalSize) && computedMax < MAX_EXP) {
 		computedMax++;
 	}
 
@@ -86,7 +84,7 @@ static MemoryManagerADT getMemoryManager(void) {
 
 void *mm_alloc(size_t size) {
 	MemoryManagerADT manager = getMemoryManager();
-	if (size > manager->size - manager->used || size == 0) {
+	if (size > manager->size - manager->used || size == 0 || size > POW2(17)) {
 		return NULL;
 	}
 	uint8_t exponent = getExponent(size);

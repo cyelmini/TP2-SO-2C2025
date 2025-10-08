@@ -62,7 +62,7 @@ static MemoryManagerADT getMemoryManager(void) {
 
 void *mm_alloc(const size_t bytes) {
 	MemoryManagerADT manager = getMemoryManager();
-	if (manager == NULL || bytes == 0) {
+	if (manager == NULL || bytes == 0 || bytes > POW2(17)) {
 		return NULL;
 	}
 

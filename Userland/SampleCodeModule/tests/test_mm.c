@@ -17,13 +17,13 @@ uint64_t test_mm(uint64_t argc, char *argv[]) {
 	uint64_t max_memory;
 
 	if (argc != 1) {
-		printf("ERROR: debe ingresar los bytes de memoria a asignar\n");
+		printf("ERROR: debe ingresar los bytes de memoria a asignar.\n");
 		return -1;
 	}
 
 	max_memory = satoi(argv[0]);
 	if (max_memory <= 0) {
-		printf("ERROR: argumento invalido\n");
+		printf("ERROR: argumento invalido.\n");
 		return -1;
 	}
 
