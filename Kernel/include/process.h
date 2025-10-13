@@ -38,6 +38,7 @@ typedef struct ProcessContext{
 
     char **argv;
     int argc;
+    
     CPUState registers;
     int16_t fileDescriptors[CANT_FILE_DESCRIPTORS];
 

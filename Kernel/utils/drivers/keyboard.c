@@ -1,10 +1,12 @@
-#include <keyboard.h>
+#include "../include/keyboard.h"
 #include <lib.h>
 #include <stdint.h>
 #include <time.h>
 #include <video.h>
+
 #define BUFFER_CAPACITY 10					   /* Longitud maxima del vector _buffer */
 #define HOTKEY 29							   /* Scancode para el snapshot de registros */
+
 static uint8_t _bufferStart = 0;			   /* Indice del comienzo de la cola */
 static char _bufferSize = 0;				   /* Longitud de la cola */
 static uint8_t _buffer[BUFFER_CAPACITY] = {0}; /* Vector ciclico que guarda las teclas

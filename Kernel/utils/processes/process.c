@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
-#include "process.h"
+#include "../../include/process.h"
+#include "../../include/memoryManagement.h"
 
 /*Listar todos los procesos: nombre, ID, prioridad, stack y base pointer, foreground y
 cualquier otra variable que consideren necesaria.*/
@@ -47,7 +48,7 @@ typedef struct ProcessContext{
 int initializeProcess(ProcessContext* process, int16_t pid, char **args, int argc, uint8_t priority, uint64_t rip, int ground, int16_t fileDescriptors[]){  
     //.        STACK Y ARGS        //
                         // me paro en el final ya que el stack crece hacia abajo
-    process->stackBase = (uint64_t) malloc(STACK_SIZE) + STACK_SIZE; 
+    process->stackBase = (uint64_t) mm_alloc(STACK_SIZE) + STACK_SIZE; 
                         //si malloc fallo devuelve NULL(0)...
     if (process->stackBase - STACK_SIZE == 0) {
 		return -1;
@@ -62,7 +63,7 @@ int initializeProcess(ProcessContext* process, int16_t pid, char **args, int arg
     process->stackPos = setupStackFrame(process->stackBase, process->registers.rip, argc, process->argv);
     
     //.       NOMBRE.       //
-    process->name = malloc(strlen(args[0]) + 1);
+    process->name = mm_alloc(strlen(args[0]) + 1);
     if (process->name == NULL) {
 		return -1;
         // FREE
@@ -73,10 +74,10 @@ int initializeProcess(ProcessContext* process, int16_t pid, char **args, int arg
     process->priority = priority;
     process->pid = pid;
     if (process->pid > 1) {
-		process->status = BLOCKED;
+		process->state = BLOCKED;
 	}
 	else {
-		process->status = READY;
+		process->state = READY;
 	}
 
     //.       FD Y GROUND.   //
@@ -89,18 +90,18 @@ int initializeProcess(ProcessContext* process, int16_t pid, char **args, int arg
 }
 
 static char **allocArgv(ProcessContext *pc, char **argv, int argc) {
-	char **newArgv = malloc((argc + 1) * sizeof(char *));
+	char **newArgv = mm_alloc((argc + 1) * sizeof(char *));
 	if (newArgv == NULL) {
 		return NULL;
 	}
 	for (int i = 0; i < argc; i++) {
-		newArgv[i] = malloc(strlen(argv[i]) + 1);
+		newArgv[i] = mm_alloc(strlen(argv[i]) + 1);
 
 		if (newArgv[i] == NULL) {
 			for (int j = 0; j < i; j++) {
-				free(newArgv[j]);
+				mm_free(newArgv[j]);
 			}
-			free(newArgv);
+			mm_free(newArgv);
 			return NULL;
 		}
 
@@ -111,11 +112,14 @@ static char **allocArgv(ProcessContext *pc, char **argv, int argc) {
 }
 
 void freeProcess(ProcessContext * pcb) {
-
+    freeArgv(pcb, pcb->argv, pcb->argc);
+    mm_free(pcb->name);
+    mm_free((void *)(pcb->stackBase - STACK_SIZE));
+    mm_free(pcb);
 }
 
 int waitProcess(int16_t pid) {
-
+    
 }
 
 int changeFileDescriptors(int16_t pid, int16_t fileDescriptors[]) {

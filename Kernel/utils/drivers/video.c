@@ -3,7 +3,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <string.h>
-#include <video.h>
+#include "../include/video.h"
 
 #define RGB_SIZE 3
 #define MAX_RESOLUTION (64 * 128) /* Longitud del buffer de caracteres */

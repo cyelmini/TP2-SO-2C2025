@@ -8,7 +8,7 @@
  * Usa listas por orden (potencia de 2) para asignar y fusionar bloques rapido
  */
 
-#include <memoryManagement.h>
+#include "../../include/memoryManagement.h"
 
 #define FREE 0
 #define USED 1

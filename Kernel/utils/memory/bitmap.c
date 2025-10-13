@@ -8,7 +8,7 @@
  * que indica si ese bloque está libre (0) u ocupado (1)
  */
 
-#include <memoryManagement.h>
+#include "../../include/memoryManagement.h"
 #include <stdint.h>
 #include <string.h>
 
