@@ -213,7 +213,7 @@ static void syscall_mm_info(mem_t *info) {
 }
 
 static uint64_t syscall_create_process(uint64_t rip, char **args, int argc, uint8_t priority, char ground, int16_t fileDescriptors[]){
-	createProcess(rip, args, argc, priority, ground, fileDescriptors);
+	return createProcess(rip, args, argc, priority, fileDescriptors, ground);
 }
 
 static uint64_t syscall_getPid() {

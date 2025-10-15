@@ -1,10 +1,10 @@
 include Makefile.inc
 
 KERNEL=kernel.bin
-SOURCES=$(wildcard *.c) $(wildcard utils/*.c) $(wildcard utils/drivers/*.c) $(wildcard utils/memory/*.c) $(wildcard utils/processes/*.c) 
+SOURCES=$(wildcard *.c) $(wildcard utils/*.c) $(wildcard utils/drivers/*.c) $(wildcard utils/processes/*.c)
 
 MM_TYPE ?= bitmap
-MM_DIR = memory
+MM_DIR = utils/memory
 MM_SOURCE = $(MM_DIR)/$(MM_TYPE).c
 MM_OBJECT = $(MM_TYPE).o
 
@@ -35,6 +35,6 @@ $(LOADEROBJECT):
 	$(ASM) $(ASMFLAGS) $(LOADERSRC) -o $(LOADEROBJECT)
 
 clean:
-	rm -rf asm/*.o utils/*.o utils/memory/*.o utils/drivers/*.o utils/processes/*.o *.o *.bin
+	rm -rf asm/*.o utils/*.o utils/memory/*.o utils/drivers/*.o utils/processes/*.o *.o *.bin $(MM_OBJECT)
 
 .PHONY: all clean

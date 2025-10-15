@@ -4,6 +4,8 @@ all:  bootloader kernel userland image
 bootloader:
 	cd Bootloader; make all
 
+MM_TYPE ?= bitmap
+
 kernel:
 	cd Kernel; make all MM_TYPE=$(MM_TYPE)
 

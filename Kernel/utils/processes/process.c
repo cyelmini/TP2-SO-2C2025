@@ -35,7 +35,7 @@ static char **allocArgv(ProcessContext *pc, char **argv, int argc) {
 			return NULL;
 		}
 
-		strcpy(newArgv[i], argv[i]);
+		my_strcpy(newArgv[i], argv[i]);
 	}
 	newArgv[argc] = NULL;
 	return newArgv;
@@ -52,7 +52,7 @@ int initializeProcess(ProcessContext* process, int16_t pid, char **args, int arg
     process->argc = argc;
     process->argv = allocArgv(process, args, argc);
     if (process->argv == NULL) {
-		mm_free(process->stackBase - STACK_SIZE);
+		mm_free((void *)(process->stackBase - STACK_SIZE));
 		return -1;
 	}
     process->rip = rip;
@@ -62,10 +62,10 @@ int initializeProcess(ProcessContext* process, int16_t pid, char **args, int arg
     process->name = mm_alloc(my_strlen(args[0]) + 1);
     if (process->name == NULL) {
         freeArgv(process, process->argv, process->argc);
-        mm_free(process->stackBase - STACK_SIZE);
+        mm_free((void *)(process->stackBase - STACK_SIZE));
 		return -1;
 	}
-    strcpy(process->name, args[0]);
+    my_strcpy(process->name, args[0]);
 
     //.     PRIORIDAD  Y PID   //
     process->priority = priority;
@@ -88,7 +88,7 @@ int initializeProcess(ProcessContext* process, int16_t pid, char **args, int arg
     if (process->waitingList == NULL) {
 		mm_free(process->name);
         freeArgv(process, process->argv, process->argc);
-        mm_free(process->stackBase - STACK_SIZE);
+        mm_free((void *)(process->stackBase - STACK_SIZE));
 		return -1;
 	}
 

@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "../include/lib.h"
 #include "../include/doubleLinkedList.h"
 #include "../../include/scheduler.h"
@@ -14,7 +15,7 @@ static schedulerADT getScheduler(){
 
 void createScheduler() {
 	
-	scheduler = (schedulerADT) malloc(sizeof(schedulerCDT));
+	scheduler = (schedulerADT) mm_alloc(sizeof(schedulerCDT));
 	
 	if (scheduler == NULL) {
 		return;
@@ -76,7 +77,7 @@ uint64_t schedule(uint64_t prevRSP){
 
 	ProcessContext * firstProcess = getFirstData(scheduler->readyProcess);
 	if(firstProcess == NULL){
-		ProcessContext * process = findProcess(IDLE_PID); // ver si hay que implementar idle
+		ProcessContext * process = findProcess(IDLE_PID); 
 		if(process == NULL){
 			return prevRSP;
 		} else {
@@ -87,7 +88,7 @@ uint64_t schedule(uint64_t prevRSP){
 
 	scheduler->currentProcess = firstProcess;
 	scheduler->currentPid = scheduler->currentProcess->pid;
-	scheduler->quantums = getQuantumValue(scheduler->currentProcess->priority);
+	scheduler->quantums = scheduler->currentProcess->priority;
 	scheduler->currentProcess->status = RUNNING;
 	return scheduler->currentProcess->stackPos;
 }
@@ -103,7 +104,7 @@ int16_t createProcess(uint64_t rip, char **args, int argc, uint8_t priority, int
 	}
 
 	ProcessContext *newProcess = (ProcessContext *)mm_alloc(sizeof(ProcessContext));
-	if(newProcess = NULL){
+	if(newProcess == NULL){
 		return -1;
 	}
 
@@ -147,8 +148,8 @@ ProcessInfo *ps(uint16_t *processQty){
 	ProcessContext * aux;
 	int i = 0;
 
-	while(hasNext(scheduler->processQty)){
-		aux = nextInList(scheduler->processQty);
+	while(hasNext(scheduler->processList)){
+		aux = nextInList(scheduler->processList);
 		array[i].pid = aux->pid;
 		array[i].priority = aux->priority;
 		array[i].ground = aux->ground;
@@ -186,47 +187,40 @@ ProcessContext *findProcess(int16_t pid){
 	return NULL;
 }
 
-/* 
 int64_t setReadyProcess(int16_t pid){
-	
+	return 0;
 }
 
 int64_t blockProcess(int16_t pid){
-
+	return 0;
 }
 
-
 void yield(){
-	
+	return;
 }
 
 int64_t killCurrentProcess(){
-
+	return 0;
 }
 
 int64_t killProcess(int16_t pid){
-	
+	return 0;
 }
 
 int64_t killForegroundProcess(){
-
-}
-
-int16_t getPid(){
-
+	return 0;
 }
 
 int64_t getFD(int64_t fd){
-	
-}
-
-
-ProcessInfo *ps(uint16_t *proccesQty) {
-
+	return 0;
 }
 
 int16_t copyProcess(ProcessInfo *dest, ProcessContext *src) {
-	
+	return 0;
 } 
 
- */
+ static void idle() {
+	while (1) {
+		_hlt();
+	}
+}
