@@ -1,8 +1,8 @@
-#include <font.h>
-#include <lib.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <string.h>
+#include "../include/font.h"
+#include "../include/lib.h"
 #include "../include/video.h"
 
 #define RGB_SIZE 3

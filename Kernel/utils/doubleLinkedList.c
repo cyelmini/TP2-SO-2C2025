@@ -1,6 +1,5 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
-
+#include <stdio.h>
+#include "../include/memoryManagement.h"
 #include "../include/doubleLinkedList.h"
 
 typedef struct Node {
@@ -17,7 +16,7 @@ typedef struct doubleLinkedListCDT {
 } doubleLinkedListCDT;
 
 doubleLinkedListADT createDoubleLinkedListADT() {
-	doubleLinkedListADT list = (doubleLinkedListADT) malloc(sizeof(doubleLinkedListCDT));
+	doubleLinkedListADT list = (doubleLinkedListADT) mm_alloc(sizeof(doubleLinkedListCDT));
 	if (list == NULL) {
 		return NULL;
 	}
@@ -29,13 +28,14 @@ doubleLinkedListADT createDoubleLinkedListADT() {
 }
 
 Node *addNode(doubleLinkedListADT list, void *data) {
-	if (list == NULL)
+	if (list == NULL) {
 		return NULL;
+	}
 
-	Node *newNode = (Node *) malloc(sizeof(Node));
-	if (newNode == NULL)
+	Node *newNode = (Node *) mm_alloc(sizeof(Node));
+	if (newNode == NULL) { 
 		return NULL;
-
+	}
 	newNode->data = data;
 	newNode->next = NULL;
 
@@ -54,10 +54,9 @@ Node *addNode(doubleLinkedListADT list, void *data) {
 }
 
 Node *addNodeInFirst(doubleLinkedListADT list, Node *node) {
-	if (list == NULL)
+	if (list == NULL || node == NULL) {
 		return NULL;
-	if (node == NULL)
-		return NULL;
+	}
 	node->prev = NULL;
 	if (list->size > 0) {
 		list->head->prev = node;
@@ -72,8 +71,9 @@ Node *addNodeInFirst(doubleLinkedListADT list, Node *node) {
 }
 
 void *removeNode(doubleLinkedListADT list, void *data) {
-	if (list == NULL || data == NULL)
+	if (list == NULL || data == NULL) {
 		return NULL;
+	}
 
 	Node *current = list->head;
 	while (current != NULL) {
@@ -94,7 +94,7 @@ void *removeNode(doubleLinkedListADT list, void *data) {
 			list->size--;
 
 			void *removedData = current->data;
-			free(current);
+			mm_free(current);
 			return removedData;
 		}
 		current = current->next;
@@ -115,39 +115,44 @@ void freeLinkedListADT(doubleLinkedListADT list) {
 	Node *next;
 	while (current) {
 		next = current->next;
-		free(current);
+		mm_free(current);
 		current = next;
 	}
-	free(list);
+	mm_free(list);
 }
 
 int getSize(doubleLinkedListADT list) {
-	if (list == NULL)
+	if (list == NULL) {
 		return -1;
+	}
 	return list->size;
 }
 
 int isEmpty(doubleLinkedListADT list) {
-	if (list == NULL)
+	if (list == NULL) {
 		return -1;
+	}
 	return list->size == 0;
 }
 
 void toBegin(doubleLinkedListADT list) {
-	if (list == NULL)
+	if (list == NULL) {
 		return;
+	}
 	list->current = list->head;
 }
 
 int hasNext(doubleLinkedListADT list) {
-	if (list == NULL)
+	if (list == NULL) {
 		return 0;
+	}
 	return list->current != NULL;
 }
 
 void *nextInList(doubleLinkedListADT list) {
-	if (!hasNext(list))
+	if (!hasNext(list)) {
 		return NULL;
+	}
 	void *data = list->current->data;
 	list->current = list->current->next;
 	return data;

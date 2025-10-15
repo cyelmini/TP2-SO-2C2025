@@ -1,9 +1,9 @@
-#include <interrupts.h>
-#include <lib.h>
-#include <moduleLoader.h>
 #include <stdint.h>
-#include <video.h>
-#include <memoryManagement.h>
+#include "include/interrupts.h"
+#include "include/lib.h"
+#include "include/moduleLoader.h"
+#include "include/video.h"
+#include "include/memoryManagement.h"
 
 extern uint8_t text;
 extern uint8_t rodata;

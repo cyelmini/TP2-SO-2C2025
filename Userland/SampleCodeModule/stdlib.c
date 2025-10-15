@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include <stdio.h>
+#include "include/stdio.h"
 
 #define toLower(n) ((n) >= 'A' && (n) <= 'Z' ? (n) - ('A' - 'a') : (n))
 #define isNumber(n) ((n) >= '0' && (n) <= '9')

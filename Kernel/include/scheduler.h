@@ -6,6 +6,7 @@
 
 #define MAX_PROCESS 30 
 #define MIN_QUANTUMS 1
+#define MIN_PRIORITY 1
 
 #define NO_PROCESS -1
 #define IDLE_PID 0
@@ -30,10 +31,11 @@ typedef struct schedulerCDT {
 } schedulerCDT;
 
 typedef struct schedulerCDT *schedulerADT;
+
 typedef struct ProcessInfo {
     char *name;
 	uint8_t priority;
-	int ground;
+	char ground;
 	uint8_t status;
 	int16_t pid;
 
@@ -45,7 +47,7 @@ void createScheduler();
 
 uint64_t schedule(uint64_t prevRSP);
 
-int16_t createProcess(uint64_t rip, char **args, int argc, uint8_t priority, int16_t fileDescriptors[], int ground);
+int16_t createProcess(uint64_t rip, char **args, int argc, uint8_t priority, int16_t fileDescriptors[], char ground);
 
 int64_t setReadyProcess(int16_t pid);
 

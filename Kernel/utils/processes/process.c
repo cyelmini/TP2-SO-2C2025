@@ -1,92 +1,22 @@
 #include <stdio.h>
 #include <stdint.h>
+#include "../../include/lib.h"
 #include "../../include/process.h"
+#include "../../include/scheduler.h"
 #include "../../include/memoryManagement.h"
 
-/*Listar todos los procesos: nombre, ID, prioridad, stack y base pointer, foreground y
-cualquier otra variable que consideren necesaria.*/
-
-typedef enum {
-    READY,
-    RUNNING,
-    BLOCKED,
-    TERMINATED
-} ProcessState;
-
-typedef struct CPUState {
-    uint64_t rip;
-    uint64_t rsp;
-    uint64_t rbp;
-    uint64_t rbx;
-    uint64_t r12;
-    uint64_t r13;
-    uint64_t r14;
-    uint64_t r15;
-} CPUState;
-
-typedef struct ProcessContext{
-    char *name;
-    uint8_t priority;
-	int16_t pid;
-    int16_t parentPid;
-
-	uint64_t stackBase;
-	uint64_t stackPos;
-
-    ProcessState state;
-    int ground; // 0 1
-
-    char **argv;
-	int argc;
-    CPUState registers;
-    int16_t fileDescriptors[CANT_FILE_DESCRIPTORS];
-
-    uint64_t quantumTicks;
-} ProcessContext;
-
-
-int initializeProcess(ProcessContext* process, int16_t pid, char **args, int argc, uint8_t priority, uint64_t rip, int ground, int16_t fileDescriptors[]){  
-    //.        STACK Y ARGS        //
-                        // me paro en el final ya que el stack crece hacia abajo
-    process->stackBase = (uint64_t) mm_alloc(STACK_SIZE) + STACK_SIZE; 
-                        //si malloc fallo devuelve NULL(0)...
-    if (process->stackBase - STACK_SIZE == 0) {
-		return -1;
-	}
-    process->argc = argc;
-    process->argv = allocArgv(process, args, argc);
-    if (process->argv == NULL) {
-		//FREE
-		return -1;
-	}
-    process->registers.rip = rip;
-    process->stackPos = setupStackFrame(process->stackBase, process->registers.rip, argc, process->argv);
-    
-    //.       NOMBRE.       //
-    process->name = mm_alloc(strlen(args[0]) + 1);
-    if (process->name == NULL) {
-		return -1;
-        // FREE
-	}
-    strcpy(process->name, args[0]);
-
-    //.     PRIORIDAD  Y PID   //
-    process->priority = priority;
-    process->pid = pid;
-    if (process->pid > 1) {
-		process->state = BLOCKED;
-	}
-	else {
-		process->state = READY;
+static void freeArgv(ProcessContext *pcb, char **argv, int argc) {
+	if (argv == NULL) {
+		return;
 	}
 
-    //.       FD Y GROUND.   //
-    for (int i = 0; i < CANT_FILE_DESCRIPTORS; i++) {
-		process->fileDescriptors[i] = fileDescriptors[i];
+	for (int i = 0; i < argc; i++) {
+		if (argv[i] != NULL) {
+			mm_free(argv[i]);
+		}
 	}
-	process->ground = ground;
 
-	return 0;
+	mm_free(argv);
 }
 
 static char **allocArgv(ProcessContext *pc, char **argv, int argc) {
@@ -95,7 +25,7 @@ static char **allocArgv(ProcessContext *pc, char **argv, int argc) {
 		return NULL;
 	}
 	for (int i = 0; i < argc; i++) {
-		newArgv[i] = mm_alloc(strlen(argv[i]) + 1);
+		newArgv[i] = mm_alloc(my_strlen(argv[i]) + 1);
 
 		if (newArgv[i] == NULL) {
 			for (int j = 0; j < i; j++) {
@@ -111,17 +41,93 @@ static char **allocArgv(ProcessContext *pc, char **argv, int argc) {
 	return newArgv;
 }
 
+int initializeProcess(ProcessContext* process, int16_t pid, char **args, int argc, uint8_t priority, uint64_t rip, char ground, int16_t fileDescriptors[]){  
+    //.        STACK Y ARGS        //
+                        // me paro en el final ya que el stack crece hacia abajo
+    process->stackBase = (uint64_t) mm_alloc(STACK_SIZE) + STACK_SIZE; 
+                        //si malloc fallo devuelve NULL(0)...
+    if (process->stackBase - STACK_SIZE == 0) {
+		return -1;
+	}
+    process->argc = argc;
+    process->argv = allocArgv(process, args, argc);
+    if (process->argv == NULL) {
+		mm_free(process->stackBase - STACK_SIZE);
+		return -1;
+	}
+    process->rip = rip;
+    process->stackPos = setupStackFrame(process->stackBase, process->rip, argc, process->argv);
+    
+    //.       NOMBRE.       //
+    process->name = mm_alloc(my_strlen(args[0]) + 1);
+    if (process->name == NULL) {
+        freeArgv(process, process->argv, process->argc);
+        mm_free(process->stackBase - STACK_SIZE);
+		return -1;
+	}
+    strcpy(process->name, args[0]);
+
+    //.     PRIORIDAD  Y PID   //
+    process->priority = priority;
+    process->pid = pid;
+    if (process->pid > 1) {
+		process->status = BLOCKED;
+	}
+	else {
+		process->status = READY;
+	}
+
+    //.       FD Y GROUND.   //
+    for (int i = 0; i < CANT_FILE_DESCRIPTORS; i++) {
+		process->fileDescriptors[i] = fileDescriptors[i];
+	}
+	process->ground = ground;
+
+    //.     WAITINGLIST.      //
+    process->waitingList = createDoubleLinkedListADT();
+    if (process->waitingList == NULL) {
+		mm_free(process->name);
+        freeArgv(process, process->argv, process->argc);
+        mm_free(process->stackBase - STACK_SIZE);
+		return -1;
+	}
+
+	return 0;
+}
+
+
 void freeProcess(ProcessContext * pcb) {
     freeArgv(pcb, pcb->argv, pcb->argc);
     mm_free(pcb->name);
     mm_free((void *)(pcb->stackBase - STACK_SIZE));
     mm_free(pcb);
 }
-
+ 
 int waitProcess(int16_t pid) {
-    
+    ProcessContext *pcb = findProcess(pid);
+    int16_t currentPid = getPid();
+
+    //si falla o intenta esperarse a si mismo
+    if (pcb == NULL || currentPid == pid) {
+		return -1;
+	}
+
+    ProcessContext *currentProcess = findProcess(currentPid);
+	addNode(pcb->waitingList, currentProcess);
+	blockProcess(currentPid);
+	return 0;
 }
 
 int changeFileDescriptors(int16_t pid, int16_t fileDescriptors[]) {
-    
+	ProcessContext *process = findProcess(pid);
+
+	if(process == NULL) {
+		return -1;
+	}
+
+	for(int i = 0; i < CANT_FILE_DESCRIPTORS; i++){
+		process->fileDescriptors[i] = fileDescriptors[i];
+	}
+	
+	return 0;
 }

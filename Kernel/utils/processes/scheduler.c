@@ -1,15 +1,19 @@
+#include "../include/lib.h"
 #include "../include/doubleLinkedList.h"
 #include "../../include/scheduler.h"
 #include "../../include/process.h"
 #include "../../include/memoryManagement.h"
 
-#include <lib.h>
-
 schedulerADT scheduler = NULL;
 static int created = 0;
+static void idle();
+
+static schedulerADT getScheduler(){
+	return scheduler;
+} 
 
 void createScheduler() {
-
+	
 	scheduler = (schedulerADT) malloc(sizeof(schedulerCDT));
 	
 	if (scheduler == NULL) {
@@ -28,15 +32,12 @@ void createScheduler() {
 
 	created = 1;
 
-	//.        IDLE.       // --> proceso al pedo que salva a la cpu de ejecutar basura si no hay ningun proceso READY
 	char *argsIdle[1] = {"idle"};
 
 	int16_t fileDescriptors[] = {-1, -1, STDERR};
-	//createProcess((uint64_t) idle, argsIdle, 1, 1, fileDescriptors, 1);
+
+	createProcess((uint64_t)idle, argsIdle, 1, MIN_PRIORITY, fileDescriptors, 0);
 }
-
-
-/* VER DONDE SE LLAMA AL SCHEDULE EN ASM !!!!!!!! */
 
 uint64_t schedule(uint64_t prevRSP){
 	if(created == 0){
@@ -44,7 +45,7 @@ uint64_t schedule(uint64_t prevRSP){
 	}
 	schedulerADT scheduler = getScheduler();
 	if(scheduler == NULL){
-		return -1;
+		return prevRSP;
 	}
 	scheduler->quantums--; 
 	
@@ -59,16 +60,16 @@ uint64_t schedule(uint64_t prevRSP){
 		}
 		scheduler->currentPid = scheduler->currentProcess->pid;
 		scheduler->quantums = scheduler->currentProcess->priority;
-		scheduler->currentProcess->state = RUNNING;
+		scheduler->currentProcess->status = RUNNING;
 		return scheduler->currentProcess->stackPos;
 	}
 
 	if(scheduler->currentProcess != NULL){
 		scheduler->currentProcess->stackPos = prevRSP;
-		if(scheduler->currentProcess->state == RUNNING){
-			scheduler->currentProcess->state = READY;
+		if(scheduler->currentProcess->status == RUNNING){
+			scheduler->currentProcess->status = READY;
 			addNode(scheduler->readyProcess, scheduler->currentProcess);
-		} else if (scheduler->currentProcess->state == TERMINATED){
+		} else if (scheduler->currentProcess->status == TERMINATED){
 			freeProcess(scheduler->currentProcess);
 		}
 	}
@@ -84,14 +85,14 @@ uint64_t schedule(uint64_t prevRSP){
 		}
 	}
 
-	scheduler->currentPid = firstProcess->pid;
-	scheduler->quantums = scheduler->currentProcess->priority;
 	scheduler->currentProcess = firstProcess;
-	scheduler->currentProcess->state = RUNNING; 
+	scheduler->currentPid = scheduler->currentProcess->pid;
+	scheduler->quantums = getQuantumValue(scheduler->currentProcess->priority);
+	scheduler->currentProcess->status = RUNNING;
 	return scheduler->currentProcess->stackPos;
 }
 
-int16_t createProcess(uint64_t rip, char **args, int argc, uint8_t priority, int16_t fileDescriptors[], int ground) {
+int16_t createProcess(uint64_t rip, char **args, int argc, uint8_t priority, int16_t fileDescriptors[], char ground) {
 	schedulerADT scheduler = getScheduler();
 	if(scheduler == NULL){
 		return -1;
@@ -106,20 +107,94 @@ int16_t createProcess(uint64_t rip, char **args, int argc, uint8_t priority, int
 		return -1;
 	}
 
-	//if(initializeProcess(newProcess, scheduler->nextPid, args, argc, priority, rip) == -1)
+	if(initializeProcess(newProcess, scheduler->nextPid, args, argc, priority, rip, ground, fileDescriptors) == -1){
+		freeProcess(newProcess);
+		return -1;
+	}
+
+	addNode(scheduler->processList, newProcess);
+	if(newProcess->pid > 1){
+		addNode(scheduler->blockedProcess, newProcess);
+	} else {
+		addNode(scheduler->readyProcess, newProcess);
+	}
+
+	scheduler->nextPid++;
+	scheduler->processQty++;
+	return newProcess->pid;
 }
 
-int64_t setReadyProcess(int16_t pid){
+int16_t getPid(){
+	schedulerADT scheduler = getScheduler();
+    return scheduler->currentPid;
+}
 
+ProcessInfo *ps(uint16_t *processQty){
+
+	schedulerADT scheduler = getScheduler();
+	if (scheduler->processList == NULL) {
+		*processQty = 0;
+		return NULL;
+	}
+
+	ProcessInfo * array = (ProcessInfo *) mm_alloc(sizeof(ProcessInfo) * scheduler->processQty);
+	if(array == NULL){
+		*processQty = 0;
+		return NULL;
+	}
+
+	toBegin(scheduler->processList);
+	ProcessContext * aux;
+	int i = 0;
+
+	while(hasNext(scheduler->processQty)){
+		aux = nextInList(scheduler->processQty);
+		array[i].pid = aux->pid;
+		array[i].priority = aux->priority;
+		array[i].ground = aux->ground;
+		array[i].stackPos = aux->stackPos;
+		array[i].stackBase = aux->stackBase;
+		array[i].status = aux->status;
+
+		if(aux->name != NULL){
+			array[i].name = (char *)mm_alloc(my_strlen(aux->name) + 1);
+			if(array[i].name == NULL){
+				mm_free(array[i].name);
+				mm_free(array);
+				*processQty = 0;
+				return NULL;
+			}
+			my_strcpy(array[i].name, aux->name);
+		} else {
+			array[i].name = NULL;
+		}
+		i++;
+	}
+	*processQty = scheduler->processQty;
+	return array;
+}
+
+ProcessContext *findProcess(int16_t pid){
+	schedulerADT scheduler = getScheduler();
+	toBegin(scheduler->processList);
+	while(hasNext(scheduler->processList)){
+		ProcessContext * aux = nextInList(scheduler->processList);
+		if(aux->pid == pid){
+			return aux;
+		}
+	}
+	return NULL;
+}
+
+/* 
+int64_t setReadyProcess(int16_t pid){
+	
 }
 
 int64_t blockProcess(int16_t pid){
 
 }
 
-ProcessContext *findProcess(int16_t pid){
-	
-}
 
 void yield(){
 	
@@ -152,8 +227,6 @@ ProcessInfo *ps(uint16_t *proccesQty) {
 
 int16_t copyProcess(ProcessInfo *dest, ProcessContext *src) {
 	
-}
+} 
 
-static getScheduler(){
-	return scheduler;
-}
+ */

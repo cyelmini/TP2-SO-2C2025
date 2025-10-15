@@ -1,4 +1,4 @@
-#include <string.h>
+#include "include/string.h"
 
 int strcmp(const char *s1, const char *s2) {
 	while (*s1 != 0 && *s1 == *s2) {

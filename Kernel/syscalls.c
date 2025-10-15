@@ -1,11 +1,13 @@
-#include <color.h>
-#include <keyboard.h>
-#include <lib.h>
-#include <memory.h>
-#include <memoryManagement.h>
 #include <stdint.h>
-#include <time.h>
-#include <video.h>
+#include "include/color.h"
+#include "include/keyboard.h"
+#include "include/lib.h"
+#include "include/memory.h"
+#include "include/memoryManagement.h"
+#include "include/process.h"
+#include "include/time.h"
+#include "include/video.h"
+#include "include/scheduler.h"
 
 // File Descriptors
 #define STDIN 0
@@ -28,6 +30,9 @@
 #define MM_ALLOC 11
 #define MM_FREE 12
 #define MM_INFO 13
+#define CREATE_PS 14
+#define GET_PID 15
+#define PS_INFO 16
 
 static uint8_t syscall_read(uint32_t fd);
 
@@ -56,6 +61,17 @@ static void *syscall_mm_alloc(size_t size);
 static void syscall_mm_free(void *const restrict ptr);
 
 static void syscall_mm_info(mem_t *info);
+
+static uint64_t syscall_create_process(uint64_t rip, char **args, int argc, uint8_t priority, char ground, int16_t fileDescriptors[]);
+
+static uint64_t syscall_getPid();
+
+static ProcessInfo *syscall_process_info(uint16_t *processQty);
+
+//typedef uint64_t (*syscall)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
+
+//static syscall syscalls[] = {(syscall) syscall_read};
+
 
 uint64_t syscallDispatcher(uint64_t nr, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
 						   uint64_t arg5) {
@@ -107,6 +123,16 @@ uint64_t syscallDispatcher(uint64_t nr, uint64_t arg0, uint64_t arg1, uint64_t a
 
 		case MM_INFO:
 			syscall_mm_info((mem_t *) arg0);
+			break;
+		
+		case CREATE_PS:
+			syscall_create_process((uint64_t)arg0, (char **) arg1, (int)arg2, (uint8_t)arg3, (char)arg4, (int16_t *)arg5);
+			
+		case GET_PID:
+   			 return syscall_getPid();
+		
+		case PS_INFO: 
+		    syscall_process_info((uint16_t *)arg0);
 			break;
 	}
 	return 0;
@@ -184,4 +210,16 @@ static void syscall_mm_free(void *const restrict ptr) {
 
 static void syscall_mm_info(mem_t *info) {
 	*info = mm_info();
+}
+
+static uint64_t syscall_create_process(uint64_t rip, char **args, int argc, uint8_t priority, char ground, int16_t fileDescriptors[]){
+	createProcess(rip, args, argc, priority, ground, fileDescriptors);
+}
+
+static uint64_t syscall_getPid() {
+	return getPid();
+}
+
+static ProcessInfo *syscall_process_info(uint16_t *processQty) {
+	return ps(processQty);
 }

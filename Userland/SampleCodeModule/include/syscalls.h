@@ -1,10 +1,10 @@
 #ifndef _SYSCALLS_H
 #define _SYSCALLS_H
 
-#include <color.h>
-#include <shared.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "color.h"
+#include "shared.h"
+#include "stddef.h"
+#include "stdint.h"
 
 /**
  * @brief Escribe a partir del descriptor recibido un caracter
@@ -103,5 +103,11 @@ void mm_free(void *const restrict ptr);
  * @param info Puntero donde se escribirá la información del heap
  */
 void mm_info(mem_t *info);
+
+uint64_t createProcess(uint64_t rip, char **args, int argc, uint8_t priority, char ground, int16_t fileDescriptors[]);
+
+uint64_t getPid();
+
+ProcessInfo processInfo(uint16_t *processQty);
 
 #endif

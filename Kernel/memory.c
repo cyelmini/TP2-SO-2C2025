@@ -1,6 +1,6 @@
-#include <memory.h>
 #include <stdint.h>
-#include <video.h>
+#include "include/memory.h"
+#include "include/video.h"
 
 uint64_t _regSnapshot[QTY_REGS] = {0}; /* Vector de valores de registros */
 static char *_regNames[] = {"RAX", "RBX", "RCX", "RDX", "RBP", "RDI", "RSI", "R8",

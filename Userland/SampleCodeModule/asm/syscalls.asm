@@ -13,6 +13,9 @@ GLOBAL getFontColor
 GLOBAL mm_alloc
 GLOBAL mm_free
 GLOBAL mm_info
+GLOBAL createProcess
+GLOBAL getPid
+GLOBAL processInfo
 
 read:
     mov rax, 0
@@ -81,5 +84,20 @@ mm_free:
 
 mm_info:
     mov rax, 13
+    int 80h
+    ret
+
+createProcess:
+    mov rax, 14
+    int 80h
+    ret
+
+getPid:
+    mov rax, 15
+    int 80h
+    ret
+
+processInfo:
+    mov rax, 16
     int 80h
     ret

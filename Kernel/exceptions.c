@@ -1,6 +1,7 @@
-#include <memory.h>
 #include <stdint.h>
-#include <video.h>
+#include "include/memory.h"
+#include "include/video.h"
+
 #define ZERO_EXCEPTION_ID 0
 #define OPCODE_EXCEPTION_ID 6
 #define GENERAL_PROTECTION_ID 13

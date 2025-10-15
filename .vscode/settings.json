@@ -6,6 +6,14 @@
         "stdio.h": "c",
         "process.h": "c",
         "stdlib.h": "c",
-        "stdarg.h": "c"
+        "stdarg.h": "c",
+        "lib.h": "c",
+        "stdint.h": "c",
+        "moduleloader.h": "c",
+        "video.h": "c",
+        "shell.h": "c",
+        "interrupts.h": "c",
+        "defs.h": "c",
+        "*.clang-format": "c"
     }
 }

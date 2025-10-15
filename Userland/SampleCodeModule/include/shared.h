@@ -12,4 +12,18 @@ typedef struct mem {
 	uint64_t free;
 } mem_t;
 
+/* 
+* Información de un proceso dado. 
+*/
+typedef struct ProcessInfo {
+    char *name;
+	uint8_t priority;
+	char ground;
+	uint8_t status;
+	int16_t pid;
+
+	uint64_t stackBase;
+	uint64_t stackPos;
+} ProcessInfo;
+
 #endif
