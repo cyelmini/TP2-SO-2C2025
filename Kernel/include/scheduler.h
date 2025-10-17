@@ -7,9 +7,11 @@
 #define MAX_PROCESS 30 
 #define MIN_QUANTUMS 1
 #define MIN_PRIORITY 1
+#define MAX_PRIORITY 10
 
 #define NO_PROCESS -1
 #define IDLE_PID 0
+#define SHELL_PID 1
 
 #define STDIN 0
 #define STDOUT 1
@@ -65,7 +67,7 @@ int64_t killForegroundProcess();
 
 int16_t getPid();
 
-int64_t getFD(int64_t fd);
+int64_t getFd(int64_t fd);
 
 ProcessInfo *ps(uint16_t *proccesQty);
 

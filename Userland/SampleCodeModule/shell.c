@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include "include/tests.h"
-#include "include/test_utils.h"
+#include "include/test_util.h"
 #include "include/libasm.h"
 #include "include/man.h"
 #include "include/shell.h"
@@ -47,7 +47,7 @@ void init() {
 							 "formato hexadecimal enviada por parametro.",
 							 .g = (void *) &printMem, SINGLE_PARAM};
 
-	commands[8] = (Command) {"clear", "Limpia toda la pantalla", .f = (void *) &clear, NO_PARAMS};
+	commands[8] = (Command) {"clear", "Limpia toda la pantalla", .f = (void *) &sys_clear, NO_PARAMS};
 
 	commands[9] = (Command) {"testmem", "Ejecuta un test del administrador de memoria.",
 							 .g = (void *) &testmem, SINGLE_PARAM};
@@ -126,7 +126,7 @@ static int div(char *num, char *div) {
 }
 
 static void time() {
-	uint32_t secs = getSeconds();
+	uint32_t secs = sys_getSeconds();
 	uint32_t h = secs / 3600, m = secs % 3600 / 60, s = secs % 3600 % 60;
 	printf("%2d:%2d:%2d\r\n", h, m, s);
 }
@@ -134,7 +134,7 @@ static void time() {
 static void fontSize(char *size) {
 	int s = atoi(size);
 	if (s >= MIN_FONT_SIZE && s <= MAX_FONT_SIZE)
-		setFontSize((uint8_t) atoi(size));
+		sys_setFontSize((uint8_t) atoi(size));
 	else {
 		printErr(INVALID_FONT_SIZE);
 		puts(CHECK_MAN_FONT);
@@ -144,7 +144,7 @@ static void fontSize(char *size) {
 static void printMem(char *pos) {
 	uint8_t resp[QTY_BYTES];
 	char *end;
-	getMemory(strtoh(pos, &end), resp);
+	sys_getMemory(strtoh(pos, &end), resp);
 	for (int i = 0; i < QTY_BYTES; i++) {
 		printf("0x%2x ", resp[i]);
 		if (i % 4 == 3)
@@ -159,7 +159,7 @@ static void printInfoReg() {
 
 	uint64_t regSnapshot[len];
 
-	getInfoReg(regSnapshot);
+	sys_getInfoReg(regSnapshot);
 	for (int i = 0; i < len; i++) {
 		printf("%s: 0x%x\n", _regNames[i], regSnapshot[i]);
 	}

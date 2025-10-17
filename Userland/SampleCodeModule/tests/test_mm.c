@@ -1,7 +1,7 @@
 #include "../include/loader.h"
 #include "../include/stdio.h"
 #include "../include/syscalls.h"
-#include "../include/test_utils.h"
+#include "../include/test_util.h"
 
 #define MAX_BLOCKS 128
 
@@ -34,7 +34,7 @@ uint64_t test_mm(uint64_t argc, char *argv[]) {
     int iteracion = 0;
 	while (rq < MAX_BLOCKS && total < max_memory) {
 		mm_rqs[rq].size = getUniform(max_memory - total - 1) + 1;
-		mm_rqs[rq].address = mm_alloc(mm_rqs[rq].size);
+		mm_rqs[rq].address = sys_mm_alloc(mm_rqs[rq].size);
 
 		if (mm_rqs[rq].address != NULL) {
 			total += mm_rqs[rq].size;
@@ -63,7 +63,7 @@ uint64_t test_mm(uint64_t argc, char *argv[]) {
 	printf("Liberando bloques...\n");
 	for (i = 0; i < rq; i++) {
 		if (mm_rqs[i].address) {
-			mm_free(mm_rqs[i].address);
+			sys_mm_free(mm_rqs[i].address);
 		}
 	}
 	return 0;

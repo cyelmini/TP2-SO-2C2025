@@ -4,14 +4,16 @@
 #include "../../include/scheduler.h"
 #include "../../include/process.h"
 #include "../../include/memoryManagement.h"
+#include "../../include/video.h"
 
 schedulerADT scheduler = NULL;
 static int created = 0;
-static void idle();
 
-static schedulerADT getScheduler(){
-	return scheduler;
-} 
+ static schedulerADT getScheduler();
+ static void idle();
+ static ProcessContext *pipedTo(int16_t fd);
+ static int16_t pipedFd(int16_t * fds);
+ static int64_t kill(schedulerADT scheduler, ProcessContext *process);
 
 void createScheduler() {
 	
@@ -188,35 +190,132 @@ ProcessContext *findProcess(int16_t pid){
 }
 
 int64_t setReadyProcess(int16_t pid){
+	schedulerADT scheduler = getScheduler();
+	ProcessContext *process = findProcess(pid);
+	if(process == NULL){
+		return -1;
+	}
+	if(process->status == BLOCKED){
+		if(removeNode(scheduler->blockedProcess, process) == NULL){
+			return -1;
+		}
+		if(addNode(scheduler->readyProcess, process) == NULL){
+			return -1;
+		}
+		process->status = READY;
+	}
 	return 0;
 }
 
 int64_t blockProcess(int16_t pid){
+	schedulerADT scheduler = getScheduler();
+	ProcessContext *process = findProcess(pid);
+	if(process == NULL) {
+		return -1;
+	}
+	if (process->status == RUNNING || process->status == READY){
+		if(process->status == READY){
+			if(removeNode(scheduler->readyProcess, process) == NULL)
+				return -1;
+		}
+		if(addNode(scheduler->blockedProcess, process) == NULL)
+			return -1;
+
+		process->status = BLOCKED;
+	}
+
+	if(getPid()== pid)
+		yield();
+
 	return 0;
 }
 
 void yield(){
-	return;
+	schedulerADT scheduler = getScheduler();
+	scheduler->quantums = 0;
+	callTimerTick();
 }
 
 int64_t killCurrentProcess(){
-	return 0;
+	schedulerADT scheduler = getScheduler();
+	return killProcess(scheduler->currentProcess->pid);
 }
 
 int64_t killProcess(int16_t pid){
+	schedulerADT scheduler = getScheduler();
+	ProcessContext *process = findProcess(pid);
+	if(process == NULL){
+		return -1;
+	}
+
+	int16_t fd = pipedFd(process->fileDescriptors);
+	if(kill(scheduler, process) == -1){
+		return -1;
+	}
+	if(fd != -1){
+		ProcessContext *aux = pipedTo(fd);
+		if(aux != NULL){
+			return kill(scheduler, aux);
+		}
+	}
 	return 0;
 }
 
+//ground == 0 -->foreground
 int64_t killForegroundProcess(){
+	schedulerADT scheduler = getScheduler();
+	if(scheduler->currentProcess == NULL){
+		return -1;
+	}
+	if(scheduler->currentProcess->ground == 0 && scheduler->currentProcess->pid != SHELL_PID){
+		printf("^C\n");
+		return killCurrentProcess();
+	}else{
+		ProcessContext *aux;
+		toBegin(scheduler->processList);
+		while(hasNext(scheduler->processList)){
+			aux = nextInList(scheduler->processList);
+			if(aux->ground == 0 && aux->pid != SHELL_PID){
+				printf("^C\n");
+				return kill(scheduler, aux);
+			}
+		}
+	}
+	// si no habia foreground que no sea la shell
 	return 0;
+	
 }
 
-int64_t getFD(int64_t fd){
-	return 0;
+int64_t getFd(int64_t fd){
+	schedulerADT scheduler = getScheduler();
+	ProcessContext *process = scheduler->currentProcess;
+	return process->fileDescriptors[fd];
 }
 
 int16_t copyProcess(ProcessInfo *dest, ProcessContext *src) {
+	dest->pid = src->pid;
+	dest->stackBase = src->stackBase;
+	dest->stackPos = src->stackPos;
+	dest->priority = src->priority;
+	dest->ground = src->ground;
+	dest->status = src->status;
+
+	if (src->name != NULL) {
+		dest->name = mm_alloc(my_strlen(src->name) + 1);
+		if (dest->name == NULL) {
+			return -1;
+		}
+		my_strcpy(dest->name, src->name);
+	}
+	else {
+		dest->name = NULL;
+	}
+
 	return 0;
+} 
+
+static schedulerADT getScheduler(){
+	return scheduler;
 } 
 
  static void idle() {
@@ -224,3 +323,58 @@ int16_t copyProcess(ProcessInfo *dest, ProcessContext *src) {
 		_hlt();
 	}
 }
+
+static ProcessContext *pipedTo(int16_t fd){
+	schedulerADT scheduler = getScheduler();
+	ProcessContext *aux;
+	toBegin(scheduler->processList);
+	while(hasNext(scheduler->processList)){
+		aux = nextInList(scheduler->processList);
+		if(aux->fileDescriptors[STDIN] == fd || aux->fileDescriptors[STDOUT] == fd){
+			return aux;
+		}
+	}
+	return NULL;
+}
+
+ static int16_t pipedFd(int16_t * fds){
+	if(fds[STDIN] != STDIN){
+		return fds[STDIN];
+	} else if(fds[STDOUT] != STDOUT){
+		return fds[STDOUT];
+	}
+	return -1;
+ }
+
+ static int64_t kill(schedulerADT scheduler, ProcessContext *process){
+	if (process->status == READY) {
+		if (removeNode(scheduler->readyProcess, process) == NULL) {
+			return -1;
+		}
+	}
+	else if (process->status == BLOCKED) {
+		if (removeNode(scheduler->blockedProcess, process) == NULL) {
+			return -1;
+		}
+	}
+
+	toBegin(process->waitingList);
+	ProcessContext *aux;
+	while (hasNext(process->waitingList)) {
+		aux = nextInList(process->waitingList);
+		if (setReadyProcess(aux->pid) == -1) {
+			return -1;
+		}
+		setReadyProcess(aux->pid);
+	}
+	if (removeNode(scheduler->processList, process) == NULL) {
+		return -1;
+	}
+	process->status = TERMINATED;
+
+	scheduler->processQty--;
+
+	mm_free(process);
+
+	return 0;
+ }

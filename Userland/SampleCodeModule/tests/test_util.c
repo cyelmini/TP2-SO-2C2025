@@ -1,4 +1,4 @@
-#include "../include/test_utils.h"
+#include "../include/test_util.h"
 
 static uint32_t m_z = 362436069;
 static uint32_t m_w = 521288629;
@@ -48,4 +48,9 @@ int64_t satoi(char *str) {
 	}
 
 	return res * sign;
+}
+
+void endless_loop() {
+	while (1)
+		;
 }

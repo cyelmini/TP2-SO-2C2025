@@ -16,11 +16,11 @@
 static void vprintf(char *fmt, va_list args);
 
 void putchar(char c) {
-	write(STDOUT, c);
+	sys_write(STDOUT, c);
 }
 
 void putcharErr(char c) {
-	write(STDERR, c);
+	sys_write(STDERR, c);
 }
 
 void puts(const char *s) {
@@ -35,12 +35,12 @@ void printErr(const char *s) {
 
 int getchar() {
 	char c;
-	c = read(STDIN);
+	c = sys_read(STDIN);
 	return c;
 }
 
 char getScanCode() {
-	return read(KBDIN);
+	return sys_read(KBDIN);
 }
 
 void printf(char *fmt, ...) {
@@ -87,13 +87,13 @@ void vprintf(char *fmt, va_list args) {
 }
 
 void printfc(Color color, char *fmt, ...) {
-	Color prevColor = getFontColor();
-	setFontColor(color.r, color.g, color.b);
+	Color prevColor = sys_getFontColor();
+	sys_setFontColor(color.r, color.g, color.b);
 	va_list args;
 	va_start(args, fmt);
 	vprintf(fmt, args);
 	va_end(args);
-	setFontColor(prevColor.r, prevColor.g, prevColor.b);
+	sys_setFontColor(prevColor.r, prevColor.g, prevColor.b);
 }
 
 void printNChars(char c, int n) {
@@ -105,15 +105,15 @@ int scanf(char *fmt, ...) {
 	va_list v;
 	va_start(v, fmt);
 	char c;
-	int ticks = getTicks();
+	int ticks = sys_getTicks();
 	int cursorTicks = 0;
 	char cursorDrawn = 0;
 	char buffer[MAX_CHARS];
 	uint64_t bIdx = 0;
 	while ((c = getchar()) != '\n' && bIdx < MAX_CHARS - 1) {
-		cursorTicks = getTicks() - ticks;
+		cursorTicks = sys_getTicks() - ticks;
 		if (cursorTicks > CURSOR_FREQ) {
-			ticks = getTicks();
+			ticks = sys_getTicks();
 			cursorTicks = 0;
 			if (cursorDrawn)
 				putchar('\b');

@@ -44,6 +44,8 @@ int waitProcess(int16_t pid);
 
 int changeFileDescriptors(int16_t pid, int16_t fileDescriptors[]);
 
+int changePriority(int16_t pid, uint8_t priority);
+
 extern uint64_t setupStackFrame(uint64_t stackBase, uint64_t code, int argc, char *args[]);
 
 #endif // PROCESS_H

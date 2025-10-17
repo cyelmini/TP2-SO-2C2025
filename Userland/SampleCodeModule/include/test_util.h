@@ -12,4 +12,6 @@ uint8_t memcheck(void *start, uint8_t value, uint32_t size);
 
 int64_t satoi(char *str);
 
+void endless_loop();
+
 #endif

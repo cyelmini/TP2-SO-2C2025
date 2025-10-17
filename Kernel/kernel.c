@@ -4,6 +4,8 @@
 #include "include/moduleLoader.h"
 #include "include/video.h"
 #include "include/memoryManagement.h"
+#include "include/scheduler.h"
+
 
 extern uint8_t text;
 extern uint8_t rodata;
@@ -39,7 +41,17 @@ void initializeKernelBinary() {
 }
 
 int main() {
-	load_idt();
+	load_idt(); 
+
+	_cli(); 
+	//Memory manager y scheduler
+	createScheduler();
+	//Proceso shell
+	char *argsShell[1] = {"shell"};
+	int16_t fileDescriptors[] = {STDIN, STDOUT, STDERR}; 
+	createProcess((uint64_t) sampleCodeModuleAddress, argsShell, 1, MAX_PRIORITY, fileDescriptors, 0);
+	_sti();
+	
 	((EntryPoint) sampleCodeModuleAddress)();
 	while (1)
 		_hlt();

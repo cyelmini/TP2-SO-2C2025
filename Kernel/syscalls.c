@@ -9,6 +9,8 @@
 #include "include/video.h"
 #include "include/scheduler.h"
 
+#define SYSCALL_COUNT 17
+
 // File Descriptors
 #define STDIN 0
 #define STDOUT 1
@@ -20,19 +22,27 @@
 #define WRITE 1
 #define CLEAR 2
 #define SECONDS 3
-#define GET_REGISTER_ARRAY 4
-#define SET_FONT_SIZE 5
-#define GET_RESOLUTION 6
-#define GET_TICKS 7
-#define GET_MEMORY 8
-#define SET_FONT_COLOR 9
-#define GET_FONT_COLOR 10
-#define MM_ALLOC 11
-#define MM_FREE 12
-#define MM_INFO 13
-#define CREATE_PS 14
-#define GET_PID 15
-#define PS_INFO 16
+#define MINUTES 4
+#define HOURS 5
+#define GET_REGISTER_ARRAY 6
+#define SET_FONT_SIZE 7
+#define GET_RESOLUTION 8
+#define GET_TICKS 9
+#define GET_MEMORY 10
+#define SET_FONT_COLOR 11
+#define GET_FONT_COLOR 12
+#define MM_ALLOC 13
+#define MM_FREE 14
+#define MM_INFO 15
+#define CREATE_PS 16
+#define GET_PID 17
+#define PS_INFO 18
+#define KILL_PROCESS 19
+#define CHANGE_PRIORITY 20
+#define BLOCK_PS 21
+#define READY_PS 22
+#define YIELD 23
+#define WAIT_PS 24
 
 static uint8_t syscall_read(uint32_t fd);
 
@@ -41,6 +51,8 @@ static void syscall_write(uint32_t fd, char c);
 static void syscall_clear();
 
 static uint32_t syscall_seconds();
+static uint32_t syscall_minutes();
+static uint32_t syscall_hours();
 
 static uint64_t *syscall_registerArray(uint64_t *regarr);
 
@@ -68,74 +80,40 @@ static uint64_t syscall_getPid();
 
 static ProcessInfo *syscall_process_info(uint16_t *processQty);
 
-//typedef uint64_t (*syscall)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
 
-//static syscall syscalls[] = {(syscall) syscall_read};
+typedef uint64_t (*syscall)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
 
+static const syscall syscalls[] = {(syscall) syscall_read,
+								   (syscall) syscall_write,
+							 	   (syscall) syscall_clear,
+							 	   (syscall) syscall_seconds,
+							 	   (syscall) syscall_minutes,
+							 	   (syscall) syscall_hours,
+							 	   (syscall) syscall_registerArray,
+								   (syscall) syscall_fontSize,
+								   (syscall) syscall_resolution,
+								   (syscall) syscall_getTicks,
+								   (syscall) syscall_getMemory,
+							 	   (syscall) syscall_setFontColor,
+								   (syscall) syscall_getFontColor,
+								   (syscall) syscall_mm_alloc,
+								   (syscall) syscall_mm_free,
+								   (syscall) syscall_mm_info,
+								   (syscall) syscall_create_process,
+								   (syscall) syscall_getPid,
+								   (syscall) syscall_process_info,
+							 	   (syscall) killProcess,
+							 	   (syscall) changePriority,
+								   (syscall) blockProcess,
+								   (syscall) setReadyProcess,
+								   (syscall) yield,
+								   (syscall) waitProcess
+								   };
 
 uint64_t syscallDispatcher(uint64_t nr, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
 						   uint64_t arg5) {
-	switch (nr) {
-		case READ:
-			return syscall_read((uint32_t) arg0);
-
-		case WRITE:
-			syscall_write((uint32_t) arg0, (char) arg1);
-			break;
-
-		case CLEAR:
-			syscall_clear();
-			break;
-
-		case SECONDS:
-			return syscall_seconds();
-
-		case GET_REGISTER_ARRAY:
-			return (uint64_t) syscall_registerArray((uint64_t *) arg0);
-
-		case SET_FONT_SIZE:
-			syscall_fontSize((uint8_t) arg0);
-			break;
-
-		case GET_RESOLUTION:
-			return syscall_resolution();
-
-		case GET_TICKS:
-			return syscall_getTicks();
-
-		case GET_MEMORY:
-			syscall_getMemory((uint64_t) arg0, (uint8_t *) arg1);
-			break;
-
-		case SET_FONT_COLOR:
-			syscall_setFontColor((uint8_t) arg0, (uint8_t) arg1, (uint8_t) arg2);
-			break;
-
-		case GET_FONT_COLOR:
-			return syscall_getFontColor();
-
-		case MM_ALLOC:
-			return (uint64_t) syscall_mm_alloc((size_t) arg0);
-
-		case MM_FREE:
-			syscall_mm_free((void *) arg0);
-			break;
-
-		case MM_INFO:
-			syscall_mm_info((mem_t *) arg0);
-			break;
-		
-		case CREATE_PS:
-			syscall_create_process((uint64_t)arg0, (char **) arg1, (int)arg2, (uint8_t)arg3, (char)arg4, (int16_t *)arg5);
-			
-		case GET_PID:
-   			 return syscall_getPid();
-		
-		case PS_INFO: 
-		    syscall_process_info((uint16_t *)arg0);
-			break;
-	}
-	return 0;
+	if(nr >= SYSCALL_COUNT) return -1;
+	return syscalls[nr](arg0, arg1, arg2, arg3, arg4, arg5);
 }
 
 static uint8_t syscall_read(uint32_t fd) {
@@ -166,6 +144,18 @@ static uint32_t syscall_seconds() {
 	uint8_t h, m, s;
 	getTime(&h, &m, &s);
 	return s + m * 60 + ((h + 24 - 3) % 24) * 3600;
+}
+
+static uint32_t syscall_minutes(){
+	uint8_t h, m, s;
+    getTime(&h, &m, &s);
+    return m + ((h + 24 - 3) % 24) * 60;
+}
+
+static uint32_t syscall_hours(){
+	uint8_t h, m, s;
+    getTime(&h, &m, &s);
+    return ((h + 24 - 3) % 24);
 }
 
 static uint64_t *syscall_registerArray(uint64_t *regarr) {

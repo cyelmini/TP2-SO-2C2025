@@ -19,6 +19,8 @@ GLOBAL _ex06Handler
 GLOBAL _ex0DHandler
 GLOBAL _ex0EHandler
 
+GLOBAL callTimerTick
+
 EXTERN irqDispatcher
 EXTERN syscallDispatcher
 EXTERN exceptionDispatcher
@@ -208,6 +210,10 @@ _ex0EHandler:
 haltcpu:
 	cli
 	hlt
+	ret
+
+callTimerTick:
+	int 20h
 	ret
 
 SECTION .bss

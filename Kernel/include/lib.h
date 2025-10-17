@@ -112,4 +112,7 @@ int my_strcpy(char * dest, const char * origin);
  */
 int my_strlen(const char * s);
 
+
+extern void callTimerTick();
+
 #endif

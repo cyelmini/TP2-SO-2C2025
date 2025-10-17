@@ -1,8 +1,8 @@
 #include <stdint.h>
-#include "../include/keyboard.h"
-#include "../include/lib.h"
-#include "../include/time.h"
-#include "../include/video.h"
+#include "../../include/keyboard.h"
+#include "../../include/lib.h"
+#include "../../include/time.h"
+#include "../../include/video.h"
 
 #define BUFFER_CAPACITY 10					   /* Longitud maxima del vector _buffer */
 #define HOTKEY 29							   /* Scancode para el snapshot de registros */
