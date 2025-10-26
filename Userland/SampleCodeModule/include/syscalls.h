@@ -126,6 +126,9 @@ int64_t sys_setReadyProcess(int16_t pid);
 
 void sys_yield();
 
+// TENDRIAMOS QUE CAMBIAR:
+// Waitpid (pid, status)
+// wait (segundos)
 int sys_waitProcess(int16_t pid);
 
 #endif
