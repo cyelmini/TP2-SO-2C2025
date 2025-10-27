@@ -1,7 +1,7 @@
-#include <stdint.h>
-#include "include/stdio.h"
 #include "include/stdlib.h"
+#include "include/stdio.h"
 #include "include/syscalls.h"
+#include <stdint.h>
 
 #define toLower(n) ((n) >= 'A' && (n) <= 'Z' ? (n) - ('A' - 'a') : (n))
 #define isNumber(n) ((n) >= '0' && (n) <= '9')
@@ -56,7 +56,6 @@ int strtoi(char *s, char **end) {
 }
 
 int strtoh(char *s, char **end) {
-
 	int num = 0;
 	int aux;
 	while (isNumber(*s) || isHex(*s)) {
@@ -66,9 +65,4 @@ int strtoh(char *s, char **end) {
 	}
 	*end = s;
 	return num;
-}
-
-void free(void *ptr) {
-    if (ptr == NULL) return;
-    sys_mm_free(ptr);
 }

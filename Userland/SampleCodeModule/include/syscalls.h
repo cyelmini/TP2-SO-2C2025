@@ -110,25 +110,71 @@ void sys_mm_free(void *const restrict ptr);
  */
 void sys_mm_info(mem_t *info);
 
-uint64_t sys_createProcess(uint64_t rip, char **args, int argc, uint8_t priority, char ground, int16_t fileDescriptors[]);
+/**
+ * @brief Crea un nuevo proceso
+ * @param rip Dirección de instrucción de entrada (función a ejecutar)
+ * @param args Vector de argumentos para el proceso
+ * @param argc Cantidad de argumentos
+ * @param priority Prioridad inicial del proceso
+ * @param ground 1 = foreground, 0 = background
+ * @param fileDescriptors Array con descriptores [stdin, stdout, stderr]
+ * @return Identificador del proceso creado (pid) o un código de error
+ */
+uint64_t sys_createProcess(uint64_t rip, char **args, int argc, uint8_t priority, char ground,
+						   int16_t fileDescriptors[]);
 
+/**
+ * @brief Obtiene el PID del proceso actual
+ * @return PID del proceso que llama
+ */
 uint64_t sys_getPid();
 
-ProcessInfo sys_processInfo(uint16_t *processQty);
+/**
+ * @brief Obtiene información de los procesos del sistema
+ * @param processQty Puntero donde se escribirá la cantidad de procesos devueltos
+ * @return Puntero a un arreglo de ProcessInfo con la información; NULL si no hay datos
+ */
+ProcessInfo *sys_processInfo(uint16_t *processQty);
 
+/**
+ * @brief Mata un proceso dado su PID
+ * @param pid Identificador del proceso a terminar
+ * @return Código de resultado (ej. 0 OK, <0 error)
+ */
 int64_t sys_killProcess(int16_t pid);
 
-int sys_changePriority(int16_t pid);
+/**
+ * @brief Cambia la prioridad de un proceso
+ * @param pid Identificador del proceso
+ * @param priority Nueva prioridad
+ * @return Código de resultado (0 OK, <0 error)
+ */
+int sys_changePriority(int16_t pid, uint8_t priority);
 
+/**
+ * @brief Bloquea un proceso (cambia su estado a bloqueado)
+ * @param pid Identificador del proceso a bloquear
+ * @return Código de resultado (0 OK, <0 error)
+ */
 int64_t sys_blockProcess(int16_t pid);
 
+/**
+ * @brief Marca un proceso como listo (set ready)
+ * @param pid Identificador del proceso
+ * @return Código de resultado (0 OK, <0 error)
+ */
 int64_t sys_setReadyProcess(int16_t pid);
 
+/**
+ * @brief Cede voluntariamente la CPU al scheduler
+ */
 void sys_yield();
 
-// TENDRIAMOS QUE CAMBIAR:
-// Waitpid (pid, status)
-// wait (segundos)
+/**
+ * @brief Espera a que un proceso termine
+ * @param pid Identificador del proceso a esperar
+ * @return Código de resultado (0 OK, <0 error)
+ */
 int sys_waitProcess(int16_t pid);
 
 #endif

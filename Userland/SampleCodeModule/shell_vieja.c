@@ -1,0 +1,189 @@
+/*#include <stdint.h>
+#include "include/tests.h"
+#include "include/test_util.h"
+#include "include/libasm.h"
+#include "include/man.h"
+#include "include/shell.h"
+#include "include/stdio.h"
+#include "include/stdlib.h"
+#include "include/string.h"
+#include "include/syscalls.h"
+
+static void help();
+static void man(char *command);
+static void printInfoReg();
+static void time();
+static int div(char *num, char *div);
+static void fontSize(char *size);
+static void printMem(char *pos);
+static void testmem(char *maxMemory);
+static int getCommandIndex(char *command);
+
+static Command commands[QTY_COMMANDS];
+
+void init() {
+	commands[0] = (Command) {"help", "Listado de comandos.", .f = (void *) &help, NO_PARAMS};
+
+	commands[1] = (Command) {"man", "Manual de uso de los comandos.", .g = (void *) &man, SINGLE_PARAM};
+
+	commands[2] = (Command) {
+		"inforeg",
+		"Informacion de los registos que fueron capturados en un momento arbitrario de ejecucion del sistema.",
+		.f = (void *) &printInfoReg, NO_PARAMS};
+
+	commands[3] = (Command) {"time", "Despliega la hora actual UTC - 3", .f = (void *) &time, NO_PARAMS};
+
+	commands[4] = (Command) {"div", "Hace la division entera de dos numeros naturales enviados por parametro.",
+							 .h = (void *) &div, DUAL_PARAM};
+
+	commands[5] = (Command) {"kaboom", "Ejecuta una excepcion de Invalid Opcode", .f = (void *) &kaboom, NO_PARAMS};
+
+	commands[6] = (Command) {
+		"font-size", "Cambio de dimensiones de la fuente. Para hacerlo escribir el comando seguido de un numero.",
+		.g = (void *) &fontSize, SINGLE_PARAM};
+
+	commands[7] = (Command) {"printmem",
+							 "Realiza un vuelco de memoria de los 32 bytes posteriores a una direccion de memoria en "
+							 "formato hexadecimal enviada por parametro.",
+							 .g = (void *) &printMem, SINGLE_PARAM};
+
+	commands[8] = (Command) {"clear", "Limpia toda la pantalla", .f = (void *) &sys_clear, NO_PARAMS};
+
+	commands[9] = (Command) {"testmem", "Ejecuta un test del administrador de memoria.",
+							 .g = (void *) &testmem, SINGLE_PARAM};
+}
+
+void run_shell() {
+
+	init();
+
+	int index;
+
+	puts(WELCOME);
+
+	while (1) {
+
+		putchar('>');
+
+		char command[MAX_CHARS] = {0};
+		char arg1[MAX_CHARS];
+		char arg2[MAX_CHARS];
+
+		int qtyParams = scanf("%s %s %s", command, arg1, arg2);
+
+		index = getCommandIndex(command);
+
+		if (index == -1) {
+			if (command[0] != 0)
+				printErr(INVALID_COMMAND);
+			continue;
+		}
+
+		int funcParams = commands[index].ftype;
+
+		if (qtyParams - 1 != funcParams) {
+			printErr(WRONG_PARAMS);
+			printf(CHECK_MAN, command);
+			continue;
+		}
+
+		switch (commands[index].ftype) {
+			case NO_PARAMS:
+				commands[index].f();
+				break;
+			case SINGLE_PARAM:
+				commands[index].g(arg1);
+				break;
+			case DUAL_PARAM:
+				commands[index].h(arg1, arg2);
+				break;
+		}
+	}
+}
+dice del comando
+
+static int getCommandIndex(char *command) {
+	int idx = 0;
+	for (; idx < QTY_COMMANDS; idx++) {
+		if (!strcmp(commands[idx].name, command))
+			return idx;
+	}
+	return -1;
+}
+
+static void help() {
+	for (int i = 0; i < QTY_COMMANDS; i++)
+		printf("%s: %s\r\n", commands[i].name, commands[i].description);
+}
+
+static int div(char *num, char *div) {
+	printf("%s/%s=%d\r\n", num, div, atoi(num) / atoi(div));
+	return 1;
+}
+
+static void time() {
+	uint32_t secs = sys_getSeconds();
+	uint32_t h = secs / 3600, m = secs % 3600 / 60, s = secs % 3600 % 60;
+	printf("%2d:%2d:%2d\r\n", h, m, s);
+}
+
+static void fontSize(char *size) {
+	int s = atoi(size);
+	if (s >= MIN_FONT_SIZE && s <= MAX_FONT_SIZE)
+		sys_setFontSize((uint8_t) atoi(size));
+	else {
+		printErr(INVALID_FONT_SIZE);
+		puts(CHECK_MAN_FONT);
+	}
+}
+
+static void printMem(char *pos) {
+	uint8_t resp[QTY_BYTES];
+	char *end;
+	sys_getMemory(strtoh(pos, &end), resp);
+	for (int i = 0; i < QTY_BYTES; i++) {
+		printf("0x%2x ", resp[i]);
+		if (i % 4 == 3)
+			putchar('\n');
+	}
+}
+
+static char *_regNames[] = {"RIP", "RSP", "RAX", "RBX", "RCX", "RDX", "RBP", "RDI", "RSI",
+							"R8",  "R9",  "R10", "R11", "R12", "R13", "R14", "R15"};
+static void printInfoReg() {
+	int len = sizeof(_regNames) / sizeof(char *);
+
+	uint64_t regSnapshot[len];
+
+	sys_getInfoReg(regSnapshot);
+	for (int i = 0; i < len; i++) {
+		printf("%s: 0x%x\n", _regNames[i], regSnapshot[i]);
+	}
+}
+
+static void man(char *command) {
+	int idx = getCommandIndex(command);
+	if (idx != -1) {
+		printf("%s\n", usages[idx]);
+	}
+	else {
+		printErr(INVALID_COMMAND);
+	}
+}
+
+static void testmem(char *maxMemory) {
+	int memVal = satoi(maxMemory);
+	if(memVal <= 0){
+		printf("El numero de memoria es invalido. Debe ser un numero positivo.\n");
+		return;
+	}
+	char *argv[1] = {maxMemory};
+	uint64_t result = test_mm(1, argv);
+
+	if (result == 0) {
+		printf("El test del memory manager fue completado exitosamente.\n");
+	} else {
+		printf("El test del memory manager fallo con codigo: %d\n", result);
+	}
+}
+*/

@@ -1,11 +1,10 @@
-#include <stdint.h>
 #include "include/interrupts.h"
 #include "include/lib.h"
-#include "include/moduleLoader.h"
-#include "include/video.h"
 #include "include/memoryManagement.h"
+#include "include/moduleLoader.h"
 #include "include/scheduler.h"
-
+#include "include/video.h"
+#include <stdint.h>
 
 extern uint8_t text;
 extern uint8_t rodata;
@@ -18,7 +17,7 @@ static const uint64_t PageSize = 0x1000;
 
 static void *const sampleCodeModuleAddress = (void *) 0x400000;
 static void *const sampleDataModuleAddress = (void *) 0x500000;
-static void * const memoryManagerModuleAddress = (void*)0x600000;
+static void *const memoryManagerModuleAddress = (void *) 0x600000;
 
 typedef int (*EntryPoint)();
 MemoryManagerADT memoryManager;
@@ -41,17 +40,17 @@ void initializeKernelBinary() {
 }
 
 int main() {
-	load_idt(); 
+	load_idt();
 
-	_cli(); 
-	//Memory manager y scheduler
+	_cli();
+	// Memory manager y scheduler
 	createScheduler();
-	//Proceso shell
+	// Proceso shell
 	char *argsShell[1] = {"shell"};
-	int16_t fileDescriptors[] = {STDIN, STDOUT, STDERR}; 
+	int16_t fileDescriptors[] = {STDIN, STDOUT, STDERR};
 	createProcess((uint64_t) sampleCodeModuleAddress, argsShell, 1, MAX_PRIORITY, fileDescriptors, 0);
 	_sti();
-	
+
 	((EntryPoint) sampleCodeModuleAddress)();
 	while (1)
 		_hlt();

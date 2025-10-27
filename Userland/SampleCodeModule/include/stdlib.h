@@ -34,6 +34,5 @@ int strtoh(char *s, char **end);
  */
 int itoa(uint64_t n, char *buffer, int base);
 
-
 void free(void *ptr);
 #endif

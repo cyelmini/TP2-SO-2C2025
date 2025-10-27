@@ -61,7 +61,7 @@ MemoryManagerADT mm_create(void *const restrict startAddress, uint64_t totalSize
 
 	uint8_t *base = (uint8_t *) startAddress;
 	memoryBaseAddress = (MemoryManagerADT) base;
-	MemoryManagerADT manager = (MemoryManagerADT) memoryBaseAddress; 
+	MemoryManagerADT manager = (MemoryManagerADT) memoryBaseAddress;
 
 	manager->maxExp = computedMax;
 	manager->totalNodes = nodes;

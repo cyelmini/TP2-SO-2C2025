@@ -1,6 +1,6 @@
-#include <stdio.h>
-#include "../include/memoryManagement.h"
 #include "../include/doubleLinkedList.h"
+#include "../include/memoryManagement.h"
+#include <stdio.h>
 
 typedef struct Node {
 	void *data;
@@ -33,7 +33,7 @@ Node *addNode(doubleLinkedListADT list, void *data) {
 	}
 
 	Node *newNode = (Node *) mm_alloc(sizeof(Node));
-	if (newNode == NULL) { 
+	if (newNode == NULL) {
 		return NULL;
 	}
 	newNode->data = data;

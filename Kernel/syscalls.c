@@ -1,15 +1,15 @@
-#include <stdint.h>
 #include "include/color.h"
 #include "include/keyboard.h"
 #include "include/lib.h"
 #include "include/memory.h"
 #include "include/memoryManagement.h"
 #include "include/process.h"
+#include "include/scheduler.h"
 #include "include/time.h"
 #include "include/video.h"
-#include "include/scheduler.h"
+#include <stdint.h>
 
-#define SYSCALL_COUNT 17
+#define SYSCALL_COUNT 25
 
 // File Descriptors
 #define STDIN 0
@@ -51,7 +51,9 @@ static void syscall_write(uint32_t fd, char c);
 static void syscall_clear();
 
 static uint32_t syscall_seconds();
+
 static uint32_t syscall_minutes();
+
 static uint32_t syscall_hours();
 
 static uint64_t *syscall_registerArray(uint64_t *regarr);
@@ -74,45 +76,47 @@ static void syscall_mm_free(void *const restrict ptr);
 
 static void syscall_mm_info(mem_t *info);
 
-static uint64_t syscall_create_process(uint64_t rip, char **args, int argc, uint8_t priority, char ground, int16_t fileDescriptors[]);
+static uint64_t syscall_create_process(uint64_t rip, char **args, int argc, uint8_t priority, char ground,
+									   int16_t fileDescriptors[]);
 
 static uint64_t syscall_getPid();
 
 static ProcessInfo *syscall_process_info(uint16_t *processQty);
 
-
 typedef uint64_t (*syscall)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
 
-static const syscall syscalls[] = {(syscall) syscall_read,
-								   (syscall) syscall_write,
-							 	   (syscall) syscall_clear,
-							 	   (syscall) syscall_seconds,
-							 	   (syscall) syscall_minutes,
-							 	   (syscall) syscall_hours,
-							 	   (syscall) syscall_registerArray,
-								   (syscall) syscall_fontSize,
-								   (syscall) syscall_resolution,
-								   (syscall) syscall_getTicks,
-								   (syscall) syscall_getMemory,
-							 	   (syscall) syscall_setFontColor,
-								   (syscall) syscall_getFontColor,
-								   (syscall) syscall_mm_alloc,
-								   (syscall) syscall_mm_free,
-								   (syscall) syscall_mm_info,
-								   (syscall) syscall_create_process,
-								   (syscall) syscall_getPid,
-								   (syscall) syscall_process_info,
-							 	   (syscall) killProcess,
-							 	   (syscall) changePriority,
-								   (syscall) blockProcess,
-								   (syscall) setReadyProcess,
-								   (syscall) yield,
-								   (syscall) waitProcess
-								   };
+static const syscall syscalls[] = {
+	(syscall) syscall_read,
+	(syscall) syscall_write,
+	(syscall) syscall_clear,
+	(syscall) syscall_seconds,
+	(syscall) syscall_minutes,
+	(syscall) syscall_hours,
+	(syscall) syscall_registerArray,
+	(syscall) syscall_fontSize,
+	(syscall) syscall_resolution,
+	(syscall) syscall_getTicks,
+	(syscall) syscall_getMemory,
+	(syscall) syscall_setFontColor,
+	(syscall) syscall_getFontColor,
+	(syscall) syscall_mm_alloc,
+	(syscall) syscall_mm_free,
+	(syscall) syscall_mm_info,
+	(syscall) syscall_create_process,
+	(syscall) syscall_getPid,
+	(syscall) syscall_process_info,
+	(syscall) killProcess,
+	(syscall) changePriority,
+	(syscall) blockProcess,
+	(syscall) setReadyProcess,
+	(syscall) yield,
+	(syscall) waitProcess,
+};
 
 uint64_t syscallDispatcher(uint64_t nr, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
 						   uint64_t arg5) {
-	if(nr >= SYSCALL_COUNT) return -1;
+	if (nr >= SYSCALL_COUNT)
+		return -1;
 	return syscalls[nr](arg0, arg1, arg2, arg3, arg4, arg5);
 }
 
@@ -146,16 +150,16 @@ static uint32_t syscall_seconds() {
 	return s + m * 60 + ((h + 24 - 3) % 24) * 3600;
 }
 
-static uint32_t syscall_minutes(){
+static uint32_t syscall_minutes() {
 	uint8_t h, m, s;
-    getTime(&h, &m, &s);
-    return m + ((h + 24 - 3) % 24) * 60;
+	getTime(&h, &m, &s);
+	return m + ((h + 24 - 3) % 24) * 60;
 }
 
-static uint32_t syscall_hours(){
+static uint32_t syscall_hours() {
 	uint8_t h, m, s;
-    getTime(&h, &m, &s);
-    return ((h + 24 - 3) % 24);
+	getTime(&h, &m, &s);
+	return ((h + 24 - 3) % 24);
 }
 
 static uint64_t *syscall_registerArray(uint64_t *regarr) {
@@ -202,7 +206,8 @@ static void syscall_mm_info(mem_t *info) {
 	*info = mm_info();
 }
 
-static uint64_t syscall_create_process(uint64_t rip, char **args, int argc, uint8_t priority, char ground, int16_t fileDescriptors[]){
+static uint64_t syscall_create_process(uint64_t rip, char **args, int argc, uint8_t priority, char ground,
+									   int16_t fileDescriptors[]) {
 	return createProcess(rip, args, argc, priority, fileDescriptors, ground);
 }
 

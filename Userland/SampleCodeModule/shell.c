@@ -1,192 +1,250 @@
-#include <stdint.h>
-#include "include/tests.h"
-#include "include/test_util.h"
+#include "include/shell.h"
 #include "include/libasm.h"
 #include "include/man.h"
-#include "include/shell.h"
+#include "include/shellFunctions.h"
 #include "include/stdio.h"
 #include "include/stdlib.h"
 #include "include/string.h"
 #include "include/syscalls.h"
+#include "include/test_util.h"
+#include "include/tests.h"
+#include <stdint.h>
 
-static void help();
-static void man(char *command);
-static void printInfoReg();
-static void time();
-static int div(char *num, char *div);
-static void fontSize(char *size);
-static void printMem(char *pos);
-static void testmem(char *maxMemory);
-static int getCommandIndex(char *command);
+#define MAX_CHARS 256
+#define BUFFER 1000
+#define IS_BUILT_IN(i) ((i) >= HELP && (i) <= EXIT)
+#define CANT_INSTRUCTIONS 21
+#define MAX_ARGS 16
 
-static Command commands[QTY_COMMANDS];
+static void handle_piped_commands(pipeCmd *pipe_cmd);
 
-void init() {
-	commands[0] = (Command) {"help", "Listado de comandos.", .f = (void *) &help, NO_PARAMS};
+typedef enum {
+	// built-in
+	HELP = 0,
+	MEM,
+	KILL,
+	BLOCK,
+	UNBLOCK,
+	NICE,
+	FONT_SIZE,
+	EXIT,
 
-	commands[1] = (Command) {"man", "Manual de uso de los comandos.", .g = (void *) &man, SINGLE_PARAM};
+	// user apps
+	CLEAR,
+	ECHO,
+	PS,
+	LOOP,
+	CAT,
+	WC,
+	FILTER,
+	MVAR,
+	TEST_MM,
+	TEST_PROCESSES,
+	TEST_PRIORITY,
+	TEST_SYNC,
+	TEST_NO_SYNC
+} instructions;
 
-	commands[2] = (Command) {
-		"inforeg",
-		"Informacion de los registos que fueron capturados en un momento arbitrario de ejecucion del sistema.",
-		.f = (void *) &printInfoReg, NO_PARAMS};
+pid_t (*instruction_handlers[CANT_INSTRUCTIONS - 8])(char *, int, int) = {
+	handle_clear,		handle_echo,		   handle_ps,
+	handle_loop,
+	handle_cat,	   // todavia no
+	handle_wc,	   // todavia no
+	handle_filter, // todavia no
+	handle_mvar,   // todavia no
+	handle_test_mm,		handle_test_processes, handle_test_priority,
+	handle_test_sync,	// todavia no
+	handle_test_no_sync // todavia no
+};
 
-	commands[3] = (Command) {"time", "Despliega la hora actual UTC - 3", .f = (void *) &time, NO_PARAMS};
+void (*built_in_handlers[])(int, char **) = {bi_help,	 bi_mem,  bi_kill,	   bi_block,
+											 bi_unblock, bi_nice, bi_fontSize, bi_exit};
 
-	commands[4] = (Command) {"div", "Hace la division entera de dos numeros naturales enviados por parametro.",
-							 .h = (void *) &div, DUAL_PARAM};
+static char *instruction_list[] = {"help",	"mem",	   "kill",	   "block",	   "unblock",  "nice",		"font-size",
+								   "exit",
 
-	commands[5] = (Command) {"kaboom", "Ejecuta una excepcion de Invalid Opcode", .f = (void *) &kaboom, NO_PARAMS};
+								   "clear", "echo",	   "ps",	   "loop",	   "cat",	   "wc",		"filter",
+								   "mvar",	"testmem", "testproc", "testprio", "testsync", "testnosync"};
 
-	commands[6] = (Command) {
-		"font-size", "Cambio de dimensiones de la fuente. Para hacerlo escribir el comando seguido de un numero.",
-		.g = (void *) &fontSize, SINGLE_PARAM};
-
-	commands[7] = (Command) {"printmem",
-							 "Realiza un vuelco de memoria de los 32 bytes posteriores a una direccion de memoria en "
-							 "formato hexadecimal enviada por parametro.",
-							 .g = (void *) &printMem, SINGLE_PARAM};
-
-	commands[8] = (Command) {"clear", "Limpia toda la pantalla", .f = (void *) &sys_clear, NO_PARAMS};
-
-	commands[9] = (Command) {"testmem", "Ejecuta un test del administrador de memoria.",
-							 .g = (void *) &testmem, SINGLE_PARAM};
-}
-
-void run_shell() {
-
-	init();
-
-	int index;
-
-	puts(WELCOME);
-
-	while (1) {
-
-		putchar('>');
-
-		char command[MAX_CHARS] = {0};
-		char arg1[MAX_CHARS];
-		char arg2[MAX_CHARS];
-
-		int qtyParams = scanf("%s %s %s", command, arg1, arg2);
-
-		index = getCommandIndex(command);
-
-		if (index == -1) {
-			if (command[0] != 0)
-				printErr(INVALID_COMMAND);
-			continue;
+int get_instruction_num(char *instruction) {
+	for (int i = 0; i < CANT_INSTRUCTIONS; i++) {
+		if (strcmp(instruction, instruction_list[i]) == 0) {
+			return i;
 		}
-
-		int funcParams = commands[index].ftype;
-
-		if (qtyParams - 1 != funcParams) {
-			printErr(WRONG_PARAMS);
-			printf(CHECK_MAN, command);
-			continue;
-		}
-
-		switch (commands[index].ftype) {
-			case NO_PARAMS:
-				commands[index].f();
-				break;
-			case SINGLE_PARAM:
-				commands[index].g(arg1);
-				break;
-			case DUAL_PARAM:
-				commands[index].h(arg1, arg2);
-				break;
-		}
-	}
-}
-
-/**
- * @brief  Devuelve el indice del vector de comandos dado su nombre
- * @param  command: Nombre del comando a buscar
- * @return  Indice del comando
- */
-static int getCommandIndex(char *command) {
-	int idx = 0;
-	for (; idx < QTY_COMMANDS; idx++) {
-		if (!strcmp(commands[idx].name, command))
-			return idx;
 	}
 	return -1;
 }
 
-static void help() {
-	for (int i = 0; i < QTY_COMMANDS; i++)
-		printf("%s: %s\r\n", commands[i].name, commands[i].description);
-}
-
-static int div(char *num, char *div) {
-	printf("%s/%s=%d\r\n", num, div, atoi(num) / atoi(div));
-	return 1;
-}
-
-static void time() {
-	uint32_t secs = sys_getSeconds();
-	uint32_t h = secs / 3600, m = secs % 3600 / 60, s = secs % 3600 % 60;
-	printf("%2d:%2d:%2d\r\n", h, m, s);
-}
-
-static void fontSize(char *size) {
-	int s = atoi(size);
-	if (s >= MIN_FONT_SIZE && s <= MAX_FONT_SIZE)
-		sys_setFontSize((uint8_t) atoi(size));
-	else {
-		printErr(INVALID_FONT_SIZE);
-		puts(CHECK_MAN_FONT);
+int instruction_parser(char *buffer, char *arguments) {
+	char *instruction = sys_mm_alloc(BUFFER * sizeof(char));
+	if (instruction == NULL) {
+		printErr("Error al asignar memoria para la instruccion.\n");
+		return -1;
 	}
+
+	int i, j = 0;
+	for (i = 0; i < BUFFER; i++) {
+		if (buffer[i] == ' ' || buffer[i] == '\0' || buffer[i] == '\n') {
+			instruction[j] = '\0';
+			i++;
+			break;
+		}
+		else {
+			instruction[j] = buffer[i];
+			j++;
+		}
+	}
+
+	int k = 0;
+	while (buffer[i] != '\0' && buffer[i] != '\n') {
+		arguments[k++] = buffer[i++];
+	}
+	arguments[k] = '\0';
+
+	int instruction_num = 0;
+	if ((instruction_num = get_instruction_num(instruction)) == -1 && instruction[0] != 0) {
+		printErr("Comando no reconocido\n");
+	}
+	sys_mm_free(instruction);
+	return instruction_num;
 }
 
-static void printMem(char *pos) {
-	uint8_t resp[QTY_BYTES];
-	char *end;
-	sys_getMemory(strtoh(pos, &end), resp);
-	for (int i = 0; i < QTY_BYTES; i++) {
-		printf("0x%2x ", resp[i]);
-		if (i % 4 == 3)
-			putchar('\n');
+int bufferCountInstructions(pipeCmd *pipe_cmd, char *line) {
+	int instructions = 0;
+	char *pipe_pos = find_char(line, '|');
+	if (pipe_pos != NULL) { // devuelve null si no hay pipe
+		*(pipe_pos - 1) = 0;
+		*pipe_pos = 0;
+		*(pipe_pos + 1) = 0;
+		char *arg2 = sys_mm_alloc(BUFFER * sizeof(char));
+		pipe_cmd->cmd2.instruction = instruction_parser(pipe_pos + 2, arg2);
+		pipe_cmd->cmd2.arguments = arg2;
+		if (pipe_cmd->cmd2.instruction >= 0)
+			instructions++;
 	}
+
+	char *arg1 = sys_mm_alloc(BUFFER * sizeof(char));
+	pipe_cmd->cmd1.instruction = instruction_parser(line, arg1);
+	pipe_cmd->cmd1.arguments = arg1;
+	if (pipe_cmd->cmd1.instruction >= 0)
+		instructions++;
+
+	if (IS_BUILT_IN(pipe_cmd->cmd1.instruction) && IS_BUILT_IN(pipe_cmd->cmd2.instruction)) {
+		printErr("No se pueden usar comandos built-in con pipes.\n");
+		sys_mm_free(pipe_cmd->cmd1.arguments);
+		sys_mm_free(pipe_cmd->cmd2.arguments);
+		sys_mm_free(pipe_cmd);
+		return -1;
+	}
+	if (IS_BUILT_IN(pipe_cmd->cmd1.instruction)) {
+		return 0;
+	}
+
+	return instructions;
 }
 
-static char *_regNames[] = {"RIP", "RSP", "RAX", "RBX", "RCX", "RDX", "RBP", "RDI", "RSI",
-							"R8",  "R9",  "R10", "R11", "R12", "R13", "R14", "R15"};
-static void printInfoReg() {
-	int len = sizeof(_regNames) / sizeof(char *);
+static int split_args(char *args, char ***out_argv) {
+	int argc = 0;
+	char **argv = (char **) sys_mm_alloc(sizeof(char *) * MAX_ARGS);
+	if (!argv)
+		return -1;
 
-	uint64_t regSnapshot[len];
+	while (*args == ' ')
+		args++;
 
-	sys_getInfoReg(regSnapshot);
-	for (int i = 0; i < len; i++) {
-		printf("%s: 0x%x\n", _regNames[i], regSnapshot[i]);
+	while (*args && argc < MAX_ARGS) {
+		argv[argc++] = args;
+		while (*args && *args != ' ')
+			args++;
+		if (*args == ' ') {
+			*args = '\0';
+			args++;
+			while (*args == ' ')
+				args++;
+		}
 	}
+	*out_argv = argv;
+	return argc;
 }
 
-static void man(char *command) {
-	int idx = getCommandIndex(command);
-	if (idx != -1) {
-		printf("%s\n", usages[idx]);
-	}
-	else {
-		printErr(INVALID_COMMAND);
-	}
+static void handle_piped_commands(pipeCmd *pipe_cmd) {
+	printf("Todavia no hay pipes. Aguante boca\n");
+	return;
 }
 
-static void testmem(char *maxMemory) {
-	int memVal = satoi(maxMemory);
-	if(memVal <= 0){
-		printf("El numero de memoria es invalido. Debe ser un numero positivo.\n");
+void run_shell() {
+	sys_clear();
+	puts(WELCOME);
+
+	char *line = sys_mm_alloc(MAX_CHARS * sizeof(char));
+	if (line == NULL) {
+		printErr("Error al asignar memoria para la linea de comandos\n");
 		return;
 	}
-	char *argv[1] = {maxMemory};
-	uint64_t result = test_mm(1, argv);
-	
-	if (result == 0) {
-		printf("El test del memory manager fue completado exitosamente.\n");
-	} else {
-		printf("El test del memory manager fallo con codigo: %d\n", result);
+
+	pipeCmd *pipe_cmd;
+	int instructions;
+
+	while (1) {
+		putchar('>');
+		scanf("%l", line);
+
+		pipe_cmd = (pipeCmd *) sys_mm_alloc(sizeof(pipeCmd));
+		if (pipe_cmd == NULL) {
+			printErr("Error al asignar memoria para los argumentos.\n");
+			return;
+		}
+
+		instructions = bufferCountInstructions(pipe_cmd, line);
+		switch (instructions) {
+			case 0:
+				if (pipe_cmd->cmd1.instruction == -1) {
+					printErr("Comando invalido.\n");
+					sys_mm_free(pipe_cmd->cmd1.arguments);
+					sys_mm_free(pipe_cmd);
+				}
+				else if (IS_BUILT_IN(pipe_cmd->cmd1.instruction)) {
+					char **argv = NULL;
+					int argc = split_args(pipe_cmd->cmd1.arguments, &argv);
+					if (argc >= 0) {
+						built_in_handlers[pipe_cmd->cmd1.instruction - HELP](argc, argv);
+						sys_mm_free(argv);
+					}
+					sys_mm_free(pipe_cmd->cmd1.arguments);
+					sys_mm_free(pipe_cmd);
+				}
+				break;
+			case 1:
+				if (pipe_cmd->cmd1.instruction == EXIT) {
+					sys_mm_free(pipe_cmd->cmd1.arguments);
+					sys_mm_free(pipe_cmd);
+					return;
+				}
+				else {
+					pid_t pid =
+						instruction_handlers[pipe_cmd->cmd1.instruction - CLEAR](pipe_cmd->cmd1.arguments, 0, 1);
+					if (pid < 0) {
+						printErr("Error al ejecutar el comando.\n");
+					}
+					else if (pid == 0) {
+						printf("Proceso %s ejecutado en background.\n", instruction_list[pipe_cmd->cmd1.instruction]);
+					}
+					else {
+						sys_waitProcess(pid);
+						printf("Proceso %d terminado.\n", pid);
+					}
+					sys_mm_free(pipe_cmd->cmd1.arguments);
+					sys_mm_free(pipe_cmd);
+				}
+				break;
+			case 2:
+				handle_piped_commands(pipe_cmd);
+				break;
+			default:
+				break;
+		}
 	}
+
+	printf("Saliendo de la terminal...\n");
+	sys_clear();
 }

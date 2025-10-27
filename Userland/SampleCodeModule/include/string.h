@@ -24,4 +24,10 @@ int strcpychar(char *dest, const char *origin, char limit);
  * @return Londitud de la cadena de destino
  */
 int strcpy(char *dest, const char *origin);
+
+/*
+ * Busca el primer caracter 'c' en la cadena 's' y devuelve
+ * un puntero a su posicion o NULL si no se encuentra.
+ */
+char *find_char(const char *s, char c);
 #endif

@@ -1,0 +1,80 @@
+#include "../include/stdio.h"
+#include "../include/syscalls.h"
+#include "../include/test_util.h"
+#include <stdint.h>
+
+#define TOTAL_PROCESSES 3
+
+#define LOWEST 0  // TODO: Change as required
+#define MEDIUM 1  // TODO: Change as required
+#define HIGHEST 2 // TODO: Change as required
+
+int64_t prio[TOTAL_PROCESSES] = {LOWEST, MEDIUM, HIGHEST};
+
+uint64_t max_value = 0;
+
+void zero_to_max() {
+	uint64_t value = 0;
+
+	while (value++ != max_value)
+		;
+
+	printf("PROCESS %d DONE!\n", sys_getPid());
+}
+
+uint64_t test_prio(uint64_t argc, char *argv[]) {
+	int64_t pids[TOTAL_PROCESSES];
+	char *ztm_argv[] = {0};
+	uint64_t i;
+
+	if (argc != 1)
+		return -1;
+
+	if ((max_value = satoi(argv[0])) <= 0)
+		return -1;
+
+	printf("SAME PRIORITY...\n");
+
+	for (i = 0; i < TOTAL_PROCESSES; i++) {
+		int16_t fds[] = {STDIN, STDOUT, STDERR};
+		pids[i] = sys_createProcess((uint64_t) zero_to_max, ztm_argv, 0, 1, 1, fds);
+	}
+
+	// Expect to see them finish at the same time
+
+	for (i = 0; i < TOTAL_PROCESSES; i++)
+		sys_waitProcess(pids[i]);
+
+	printf("SAME PRIORITY, THEN CHANGE IT...\n");
+
+	for (i = 0; i < TOTAL_PROCESSES; i++) {
+		int16_t fds[] = {STDIN, STDOUT, STDERR};
+		pids[i] = sys_createProcess((uint64_t) zero_to_max, ztm_argv, 0, 1, 1, fds);
+		sys_changePriority(pids[i], prio[i]);
+		printf("  PROCESS %d NEW PRIORITY: %d\n", pids[i], prio[i]);
+	}
+
+	// Expect the priorities to take effect
+
+	for (i = 0; i < TOTAL_PROCESSES; i++)
+		sys_waitProcess(pids[i]);
+
+	printf("SAME PRIORITY, THEN CHANGE IT WHILE BLOCKED...\n");
+
+	for (i = 0; i < TOTAL_PROCESSES; i++) {
+		int16_t fds[] = {STDIN, STDOUT, STDERR};
+		pids[i] = sys_createProcess((uint64_t) zero_to_max, ztm_argv, 0, 1, 1, fds);
+		sys_blockProcess(pids[i]);
+		sys_changePriority(pids[i], prio[i]);
+		printf("  PROCESS %d NEW PRIORITY: %d\n", pids[i], prio[i]);
+	}
+
+	for (i = 0; i < TOTAL_PROCESSES; i++)
+		sys_setReadyProcess(pids[i]);
+
+	// Expect the priorities to take effect
+
+	for (i = 0; i < TOTAL_PROCESSES; i++)
+		sys_waitProcess(pids[i]);
+	return 0;
+}

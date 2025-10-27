@@ -1,6 +1,6 @@
-#include <stdint.h>
 #include "include/memory.h"
 #include "include/video.h"
+#include <stdint.h>
 
 #define ZERO_EXCEPTION_ID 0
 #define OPCODE_EXCEPTION_ID 6

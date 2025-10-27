@@ -1,10 +1,10 @@
 #ifndef __SCHEDULER_H
 #define __SCHEDULER_H
 
-#include <stdint.h>
 #include "process.h"
+#include <stdint.h>
 
-#define MAX_PROCESS 30 
+#define MAX_PROCESS 30
 #define MIN_QUANTUMS 1
 #define MIN_PRIORITY 1
 #define MAX_PRIORITY 10
@@ -29,13 +29,13 @@ typedef struct schedulerCDT {
 
 	uint16_t processQty;
 	int quantums;
-    uint64_t globalTicks; 
+	uint64_t globalTicks;
 } schedulerCDT;
 
 typedef struct schedulerCDT *schedulerADT;
 
 typedef struct ProcessInfo {
-    char *name;
+	char *name;
 	uint8_t priority;
 	char ground;
 	uint8_t status;

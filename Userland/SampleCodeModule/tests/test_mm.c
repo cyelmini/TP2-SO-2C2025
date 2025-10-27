@@ -31,7 +31,7 @@ uint64_t test_mm(uint64_t argc, char *argv[]) {
 	printf("Solicitando bloques de memoria...\n");
 	rq = 0;
 	total = 0;
-    int iteracion = 0;
+	int iteracion = 0;
 	while (rq < MAX_BLOCKS && total < max_memory) {
 		mm_rqs[rq].size = getUniform(max_memory - total - 1) + 1;
 		mm_rqs[rq].address = sys_mm_alloc(mm_rqs[rq].size);
@@ -40,7 +40,7 @@ uint64_t test_mm(uint64_t argc, char *argv[]) {
 			total += mm_rqs[rq].size;
 			rq++;
 		}
-        iteracion++;
+		iteracion++;
 	}
 
 	printf("Inicializando bloques...\n");

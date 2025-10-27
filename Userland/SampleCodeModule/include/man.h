@@ -29,6 +29,7 @@ char *usages[QTY_COMMANDS] = {
 
 	"Uso: clear - limpia la pantalla. No recibe parametros.",
 
-	"Uso: testmem [MAX_MEMORY] - ejecuta un test del administrador de memoria con un limite maximo de bytes de X. No recibe parametros.\n"
+	"Uso: testmem [MAX_MEMORY] - ejecuta un test del administrador de memoria con un limite maximo de bytes de X. No "
+	"recibe parametros.\n"
 	"Ejemplo: testmem 1024"};
 #endif
