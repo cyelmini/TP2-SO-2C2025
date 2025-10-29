@@ -1,4 +1,5 @@
 #include "include/memory.h"
+#include "include/color.h"
 #include "include/video.h"
 #include <stdint.h>
 

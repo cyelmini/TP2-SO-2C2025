@@ -142,7 +142,7 @@ static char **allocArgv(ProcessContext *pc, char **argv, int argc) {
 
 int changePriority(int16_t pid, uint8_t priority) {
 	if (priority > MAX_PRIORITY || priority < MIN_PRIORITY) {
-		return .1;
+		return -1;
 	}
 
 	ProcessContext *process = findProcess(pid);

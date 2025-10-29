@@ -38,11 +38,11 @@ typedef enum {
 	WC,
 	FILTER,
 	MVAR,
-	TEST_MM,
-	TEST_PROCESSES,
-	TEST_PRIORITY,
-	TEST_SYNC,
-	TEST_NO_SYNC
+	TESTMEM,
+	TESTPROC,
+	TESTPRIO,
+	TESTSYNC,
+	TESTNOSYNC
 } instructions;
 
 pid_t (*instruction_handlers[CANT_INSTRUCTIONS - 8])(char *, int, int) = {
@@ -129,7 +129,7 @@ int bufferCountInstructions(pipeCmd *pipe_cmd, char *line) {
 	if (pipe_cmd->cmd1.instruction >= 0)
 		instructions++;
 
-	if (IS_BUILT_IN(pipe_cmd->cmd1.instruction) && IS_BUILT_IN(pipe_cmd->cmd2.instruction)) {
+	if (instructions>1 && IS_BUILT_IN(pipe_cmd->cmd1.instruction) && IS_BUILT_IN(pipe_cmd->cmd2.instruction)) {
 		printErr("No se pueden usar comandos built-in con pipes.\n");
 		sys_mm_free(pipe_cmd->cmd1.arguments);
 		sys_mm_free(pipe_cmd->cmd2.arguments);
@@ -187,7 +187,7 @@ void run_shell() {
 
 	while (1) {
 		putchar('>');
-		scanf("%l", line);
+		scanf("%s", line);
 
 		pipe_cmd = (pipeCmd *) sys_mm_alloc(sizeof(pipeCmd));
 		if (pipe_cmd == NULL) {

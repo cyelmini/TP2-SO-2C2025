@@ -71,21 +71,24 @@ uint64_t schedule(uint64_t prevRSP) {
 		if (scheduler->currentProcess->status == RUNNING) {
 			scheduler->currentProcess->status = READY;
 			addNode(scheduler->readyProcess, scheduler->currentProcess);
-		}
-		else if (scheduler->currentProcess->status == TERMINATED) {
+		} else if (scheduler->currentProcess->status == TERMINATED) {
 			freeProcess(scheduler->currentProcess);
+			scheduler->currentProcess = NULL;
+            scheduler->currentPid = NO_PROCESS;
 		}
 	}
 
 	ProcessContext *firstProcess = getFirstData(scheduler->readyProcess);
 	if (firstProcess == NULL) {
-		ProcessContext *process = findProcess(IDLE_PID);
-		if (process == NULL) {
+		ProcessContext *idle = findProcess(IDLE_PID);
+		if (idle == NULL) {
 			return prevRSP;
-		}
-		else {
-			scheduler->currentProcess = process;
-			return process->stackPos;
+		} else {
+			scheduler->currentProcess = idle;
+			scheduler->currentPid = idle->pid;
+			scheduler->quantums = idle->priority;
+			idle->status = RUNNING;
+			return idle->stackPos;
 		}
 	}
 
@@ -102,7 +105,7 @@ int16_t createProcess(uint64_t rip, char **args, int argc, uint8_t priority, int
 		return -1;
 	}
 
-	if (scheduler->processQty >= MAX_PROCESS) {
+	if (scheduler->processQty > MAX_PROCESS) {
 		return -1;
 	}
 
@@ -365,19 +368,19 @@ static int64_t kill(schedulerADT scheduler, ProcessContext *process) {
 	ProcessContext *aux;
 	while (hasNext(process->waitingList)) {
 		aux = nextInList(process->waitingList);
-		if (setReadyProcess(aux->pid) == -1) {
-			return -1;
+		if(aux != NULL) {
+			setReadyProcess(aux->pid);
 		}
-		setReadyProcess(aux->pid);
 	}
 	if (removeNode(scheduler->processList, process) == NULL) {
 		return -1;
 	}
 	process->status = TERMINATED;
-
 	scheduler->processQty--;
 
-	mm_free(process);
+	if(scheduler->currentProcess != process){
+		freeProcess(process);
+	}
 
 	return 0;
 }
