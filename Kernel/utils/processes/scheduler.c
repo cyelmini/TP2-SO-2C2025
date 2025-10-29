@@ -120,11 +120,10 @@ int16_t createProcess(uint64_t rip, char **args, int argc, uint8_t priority, int
 	}
 
 	addNode(scheduler->processList, newProcess);
-	if (newProcess->pid > 1) {
-		addNode(scheduler->blockedProcess, newProcess);
-	}
-	else {
+	if (newProcess->status == READY) {
 		addNode(scheduler->readyProcess, newProcess);
+	} else if (newProcess->status == BLOCKED) {
+		addNode(scheduler->blockedProcess, newProcess);
 	}
 
 	scheduler->nextPid++;

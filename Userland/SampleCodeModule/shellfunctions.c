@@ -13,10 +13,10 @@ static uint64_t echo(int argc, char **argv);
 static uint64_t clear(int argc, char **argv);
 static uint64_t ps(int argc, char **argv);
 static uint64_t loop(int argc, char **argv);
-/* cat, wc, filter, mvar  no estan implementadas*/
+/* cat, wc, filter, mvar no estan implementadas*/
 static uint64_t run_test_mm(int argc, char **argv);
 static uint64_t run_test_processes(int argc, char **argv);
-static uint64_t test_priority(int argc, char **argv);
+static uint64_t run_test_priority(int argc, char **argv);
 
 /* ------------------------ Funciones built-in de la shell ------------------------ */
 
@@ -34,17 +34,17 @@ void bi_help(int argc, char **argv) {
 		"-------------BUILT-INS-------------\n"
 		"help                       Muestra el listado de comandos disponibles.\n"
 		"font-size                  Cambia el tamaño de la fuente. Uso: font-size <número>.\n"
-		"clear                      Limpia completamente la pantalla.\n"
-		"exit                       Cierra la shell actual.\n\n"
+		"exit                       Cierra la shell actual.\n"
 		"block                      Bloquea un proceso dado su ID.\n"
 		"unblock                    Desbloquea un proceso dado su ID.\n"
 		"kill                       Mata un proceso dado su ID.\n"
 		"nice                       Cambia la prioridad de un proceso dado su ID y la nueva prioridad.\n"
-		"ps                         Lista todos los procesos en ejecucion con sus propiedades.\n"
 		"mem                        Muestra el estado de la memoria: total, ocupada y libre.\n\n"
 
 		"-------------APLICACIONES DE USUARIO-------------\n"
+		"clear                      Limpia completamente la pantalla.\n"
 		"echo                       Imprime los argumentos pasados por parametro.\n"
+		"ps                         Lista todos los procesos en ejecucion con sus propiedades.\n"
 		"loop                       Imprime su ID con un saludo cada cierta cantidad de segundos.\n"
 		"cat                     	Imprime el contenido recibido por la entrada estándar (stdin).\n"
 		"wc                         Cuenta la cantidad de lineas recibidas por la entrada estandar.\n"
@@ -65,19 +65,6 @@ void bi_help(int argc, char **argv) {
 	printf("%s", manual);
 }
 
-void bi_mem(int argc, char **argv) {
-	(void) argv;
-	if (argc != 0) {
-		printf("Uso: mem\n");
-		return;
-	}
-	mem_t info;
-	sys_mm_info(&info);
-	printf("Memoria total: %u bytes\n", info.size);
-	printf("Usada: %u bytes\n", info.used);
-	printf("Libre: %u bytes\n", info.free);
-}
-
 void bi_fontSize(int argc, char **argv) {
 	if (argc != 1 || argv[0] == NULL) {
 		printf("Uso: font-size <n>\n");
@@ -91,13 +78,11 @@ void bi_fontSize(int argc, char **argv) {
 	sys_setFontSize((uint8_t) v);
 }
 
-void bi_kill(int argc, char **argv) {
-	if (argc < 1 || argv[0] == NULL) {
-		printf("Uso: kill <pid>\n");
-		return;
-	}
-	pid_t pid = (pid_t) atoi(argv[0]);
-	sys_killProcess(pid);
+void bi_exit(int argc, char **argv) {
+	(void) argc;
+	(void) argv;
+	uint64_t mypid = sys_getPid();
+	sys_killProcess((pid_t) mypid);
 }
 
 void bi_block(int argc, char **argv) {
@@ -110,7 +95,7 @@ void bi_block(int argc, char **argv) {
 }
 
 void bi_unblock(int argc, char **argv) {
-	if (argc < 1 || argv[0] == NULL) {
+	if (argc != 1 || argv[0] == NULL) {
 		printf("Uso: unblock <pid>\n");
 		return;
 	}
@@ -118,21 +103,54 @@ void bi_unblock(int argc, char **argv) {
 	sys_setReadyProcess(pid);
 }
 
-void bi_nice(int argc, char **argv) {
-	if (argc < 2 || argv[0] == NULL || argv[1] == NULL) {
-		printf("Uso: nice <pid> <priority>\n");
+void bi_kill(int argc, char **argv) {
+	if (argc != 1 || argv[0] == NULL) {
+		printf("Uso: kill <pid>\n");
 		return;
 	}
 	pid_t pid = (pid_t) atoi(argv[0]);
-	int priority = (int) strtoi(argv[1], NULL);
-	sys_changePriority(pid, priority);
+	if(pid <= 1){
+		printf("PID debe ser mayor que 1\n");
+		return;
+	}
+	sys_killProcess(pid);
 }
 
-void bi_exit(int argc, char **argv) {
-	(void) argc;
+void bi_nice(int argc, char **argv) {
+    if (argc != 2 || argv[0] == NULL || argv[1] == NULL) {
+        printf("Uso: nice <pid> <priority>\n");
+        return;
+    }
+
+    pid_t pid = (pid_t) atoi(argv[0]);
+    int priority = (int) strtoi(argv[1], NULL);
+
+    if (pid == 0 || pid == 1) {
+        printf("No pueden cambiarse las prioridades de la shell o idle\n");
+        return;
+    }
+    if (pid < 0) {
+        printf("pid debe ser mayor que 1\n");
+        return;
+    }
+
+    int out = sys_changePriority(pid, priority);
+    if (out == -1) {
+        printf("Proceso %d no encontrado\n", (int)pid);
+    }
+}
+
+void bi_mem(int argc, char **argv) {
 	(void) argv;
-	uint64_t mypid = sys_getPid();
-	sys_killProcess((pid_t) mypid);
+	if (argc != 0) {
+		printf("Uso: mem\n");
+		return;
+	}
+	mem_t info;
+	sys_mm_info(&info);
+	printf("Memoria total: %u bytes\n", info.size);
+	printf("Usada: %u bytes\n", info.used);
+	printf("Libre: %u bytes\n", info.free);
 }
 
 /* ------------------------ Funciones de aplicaciones de User Space ------------------------ */
@@ -143,7 +161,7 @@ pid_t handle_clear(char *arg, int stdin, int stdout) {
 	char *argv[] = {NULL};
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
-	char ground = 1; /* foreground */
+	char ground = 0;
 	return (pid_t) sys_createProcess((uint64_t) clear, argv, 0, priority, ground, fds);
 }
 
@@ -159,7 +177,7 @@ pid_t handle_echo(char *arg, int stdin, int stdout) {
 	char *argv[] = {arg};
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
-	char ground = 1;
+	char ground = 0;
 
 	return (pid_t) sys_createProcess((uint64_t) echo, argv, 1, priority, ground, fds);
 }
@@ -179,21 +197,32 @@ pid_t handle_ps(char *arg, int stdin, int stdout) {
 	char *argv[] = {NULL};
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
-	char ground = 1; // foreground
+	char ground = 0; 
 	return (pid_t) sys_createProcess((uint64_t) ps, argv, 0, priority, ground, fds);
 }
 
 static uint64_t ps(int argc, char **argv) {
-	(void) argc;
-	(void) argv;
+    (void) argc;
+    (void) argv;
 
-	uint16_t qty = 0;
-	ProcessInfo *list = sys_processInfo(&qty);
-	for (uint16_t i = 0; i < qty; i++) {
-		printf("PID:%d  NAME:%s  STATUS:%d  PRIO:%d\n", (int) list[i].pid, list[i].name, (int) list[i].status,
-			   (int) list[i].priority);
-	}
-	return 0;
+    uint16_t qty = 0;
+    ProcessInfo *list = sys_processInfo(&qty);
+    if (!list)
+        return 0;
+
+    for (uint16_t i = 0; i < qty; i++) {
+        printf("PID:%d  NAME:%s  STATUS:%d  PRIO:%d\n",
+               (int) list[i].pid,
+               list[i].name ? list[i].name : "(null)",
+               (int) list[i].status,
+               (int) list[i].priority);
+
+        if (list[i].name) {
+            sys_mm_free(list[i].name);
+        }
+    }
+    sys_mm_free(list);
+    return 0;
 }
 
 /* ------------------------ LOOP ------------------------ */
@@ -213,7 +242,7 @@ pid_t handle_loop(char *arg, int stdin, int stdout) {
 
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
-	char ground = 1; /* foreground */
+	char ground = 0; 
 
 	return (pid_t) sys_createProcess((uint64_t) loop, argv, argc, priority, ground, fds);
 }
@@ -256,7 +285,7 @@ pid_t handle_test_mm(char *arg, int stdin, int stdout) {
 	int argc = (arg && *arg) ? 1 : 0;
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
-	char ground = 1; // foreground
+	char ground = 0;
 
 	return (pid_t) sys_createProcess((uint64_t) run_test_mm, argv, argc, priority, ground, fds);
 }
@@ -280,14 +309,18 @@ static uint64_t run_test_mm(int argc, char **argv) {
 /* ------------------------ TEST_PROCESSES ------------------------ */
 
 pid_t handle_test_processes(char *arg, int stdin, int stdout) {
-	(void) arg;
-	char *argv[] = {NULL};
-	int argc = 0;
-	int16_t fds[] = {stdin, stdout, STDERR};
-	uint8_t priority = 1;
-	char ground = 1; // foreground
+    char *argv[] = { arg };
+    int argc = (arg && *arg) ? 1 : 0;
 
-	return (pid_t) sys_createProcess((uint64_t) run_test_processes, argv, argc, priority, ground, fds);
+    if (argc != 1) {
+        printf("Uso: testproc <max_processes>\n");
+        return -1;
+    }
+    int16_t fds[] = { stdin, stdout, STDERR };
+    uint8_t priority = 1;
+    char ground = 0; 
+
+    return (pid_t) sys_createProcess((uint64_t) run_test_processes, argv, argc, priority, ground, fds);
 }
 
 static uint64_t run_test_processes(int argc, char **argv) {
@@ -307,27 +340,32 @@ static uint64_t run_test_processes(int argc, char **argv) {
 /* ------------------------ TEST_PRIORITY ------------------------ */
 
 pid_t handle_test_priority(char *arg, int stdin, int stdout) {
-	(void) arg;
-	char *argv[] = {NULL};
-	int argc = 0;
-	int16_t fds[] = {stdin, stdout, STDERR};
-	uint8_t priority = 1;
-	char ground = 1; // foreground
+    char *argv[] = { arg };
+    int argc = (arg && *arg) ? 1 : 0;
 
-	return (pid_t) sys_createProcess((uint64_t) test_priority, argv, argc, priority, ground, fds);
+    if (argc != 1) {
+        printf("Uso: testprio <max_value>\n");
+        return -1;
+    }
+
+    int16_t fds[] = { stdin, stdout, STDERR };
+    uint8_t priority = 1;
+    char ground = 0; 
+
+    return (pid_t) sys_createProcess((uint64_t) run_test_priority, argv, argc, priority, ground, fds);
 }
 
-static uint64_t test_priority(int argc, char **argv) {
+static uint64_t run_test_priority(int argc, char **argv) {
 	(void) argc;
 	(void) argv;
 	printf("[test_priority] Iniciando prueba de scheduling por prioridad...\n");
 	uint64_t result = test_prio(argc, argv);
 
-	if (result == 0)
+	if (result == 0) {
 		printf("[test_priority] Test completado exitosamente.\n");
-	else
+	} else {
 		printf("[test_priority] Falló con código: %d\n", (int) result);
-
+	}
 	return 0;
 }
 
