@@ -173,78 +173,76 @@ static void handle_piped_commands(pipeCmd *pipe_cmd) {
 }
 
 void run_shell() {
-	sys_clear();
-	puts(WELCOME);
+    sys_clear();
+    puts(WELCOME);
 
-	char *line = sys_mm_alloc(MAX_CHARS * sizeof(char));
-	if (line == NULL) {
-		printErr("Error al asignar memoria para la linea de comandos\n");
-		return;
-	}
+    char *line = sys_mm_alloc(MAX_CHARS * sizeof(char));
+    if (line == NULL) {
+        printErr("Error al asignar memoria para la linea de comandos\n");
+        return;
+    }
 
-	pipeCmd *pipe_cmd;
-	int instructions;
+    pipeCmd *pipe_cmd;
+    int instructions;
 
-	while (1) {
-		putchar('>');
-		scanf("%s", line);
+    while (1) {
+        putchar('>');
+        int n = read_line(line, MAX_CHARS);
+        if (n <= 0) {
+            continue; 
+        }
 
-		pipe_cmd = (pipeCmd *) sys_mm_alloc(sizeof(pipeCmd));
-		if (pipe_cmd == NULL) {
-			printErr("Error al asignar memoria para los argumentos.\n");
-			return;
-		}
+        pipe_cmd = (pipeCmd *) sys_mm_alloc(sizeof(pipeCmd));
+        if (pipe_cmd == NULL) {
+            printErr("Error al asignar memoria para los argumentos.\n");
+            return;
+        }
 
-		instructions = bufferCountInstructions(pipe_cmd, line);
-		switch (instructions) {
-			case 0:
-				if (pipe_cmd->cmd1.instruction == -1) {
-					printErr("Comando invalido.\n");
-					sys_mm_free(pipe_cmd->cmd1.arguments);
-					sys_mm_free(pipe_cmd);
-				}
-				else if (IS_BUILT_IN(pipe_cmd->cmd1.instruction)) {
-					char **argv = NULL;
-					int argc = split_args(pipe_cmd->cmd1.arguments, &argv);
-					if (argc >= 0) {
-						built_in_handlers[pipe_cmd->cmd1.instruction - HELP](argc, argv);
-						sys_mm_free(argv);
-					}
-					sys_mm_free(pipe_cmd->cmd1.arguments);
-					sys_mm_free(pipe_cmd);
-				}
-				break;
-			case 1:
-				if (pipe_cmd->cmd1.instruction == EXIT) {
-					sys_mm_free(pipe_cmd->cmd1.arguments);
-					sys_mm_free(pipe_cmd);
-					return;
-				}
-				else {
-					pid_t pid =
-						instruction_handlers[pipe_cmd->cmd1.instruction - CLEAR](pipe_cmd->cmd1.arguments, 0, 1);
-					if (pid < 0) {
-						printErr("Error al ejecutar el comando.\n");
-					}
-					else if (pid == 0) {
-						printf("Proceso %s ejecutado en background.\n", instruction_list[pipe_cmd->cmd1.instruction]);
-					}
-					else {
-						sys_waitProcess(pid);
-						printf("Proceso %d terminado.\n", pid);
-					}
-					sys_mm_free(pipe_cmd->cmd1.arguments);
-					sys_mm_free(pipe_cmd);
-				}
-				break;
-			case 2:
-				handle_piped_commands(pipe_cmd);
-				break;
-			default:
-				break;
-		}
-	}
+        instructions = bufferCountInstructions(pipe_cmd, line);
 
-	printf("Saliendo de la terminal...\n");
-	sys_clear();
+        switch (instructions) {
+            case 0: {
+                if (pipe_cmd->cmd1.instruction == -1) {
+                    printErr("Comando invalido.\n");
+                } else if (IS_BUILT_IN(pipe_cmd->cmd1.instruction)) {
+                    char **argv = NULL;
+                    int argc = split_args(pipe_cmd->cmd1.arguments, &argv);
+                    if (argc >= 0) {
+                        built_in_handlers[pipe_cmd->cmd1.instruction - HELP](argc, argv);
+                        sys_mm_free(argv);
+                    }
+                }
+                sys_mm_free(pipe_cmd->cmd1.arguments);
+                sys_mm_free(pipe_cmd);
+            } break;
+
+            case 1: {
+                if (pipe_cmd->cmd1.instruction == EXIT) {
+                    sys_mm_free(pipe_cmd->cmd1.arguments);
+                    sys_mm_free(pipe_cmd);
+                    return;
+                }
+                pid_t pid = instruction_handlers[pipe_cmd->cmd1.instruction - CLEAR](
+                                pipe_cmd->cmd1.arguments, STDIN, STDOUT);
+                if (pid < 0) {
+                    printErr("Error al ejecutar el comando.\n");
+                } else if (pid == 0) {
+                    printf("Proceso %s ejecutado en background.\n",
+                           instruction_list[pipe_cmd->cmd1.instruction]);
+                } else {
+                    sys_waitProcess(pid);
+                    printf("Proceso %d terminado.\n", pid);
+                }
+                sys_mm_free(pipe_cmd->cmd1.arguments);
+                sys_mm_free(pipe_cmd);
+            } break;
+
+            case 2:
+                handle_piped_commands(pipe_cmd);
+                break;
+
+            default:
+                break;
+        }
+    }
 }

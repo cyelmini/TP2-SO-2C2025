@@ -15,6 +15,7 @@
         "interrupts.h": "c",
         "defs.h": "c",
         "*.clang-format": "c",
-        "syscalls.h": "c"
+        "syscalls.h": "c",
+        "shellfunctions.h": "c"
     }
 }

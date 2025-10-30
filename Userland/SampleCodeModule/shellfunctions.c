@@ -5,6 +5,7 @@
 #include "include/string.h"
 #include "include/syscalls.h"
 #include "include/tests.h"
+#include "include/shared.h"
 #include <stdint.h>
 
 typedef uint64_t (*fn)(uint64_t argc, char **argv);
@@ -86,21 +87,35 @@ void bi_exit(int argc, char **argv) {
 }
 
 void bi_block(int argc, char **argv) {
-	if (argc < 1 || argv[0] == NULL) {
-		printf("Uso: block <pid>\n");
-		return;
-	}
-	pid_t pid = (pid_t) atoi(argv[0]);
-	sys_blockProcess(pid);
+    if (argc < 1 || argv[0] == NULL) {
+        printf("Uso: block <pid>\n");
+        return;
+    }
+
+    pid_t pid = (pid_t) atoi(argv[0]);
+    pid_t shellPid = (pid_t) sys_getPid();   
+
+    // proteger idle/shell
+    if (pid == 0 || pid == 1 || pid == shellPid) {
+        printf("Error: no se puede bloquear la shell ni el proceso idle.\n");
+        return;
+    }
+
+    int rc = sys_blockProcess(pid);
+    if (rc == -1) {
+        printf("Error al bloquear el proceso %d\n", (int)pid);
+    } else {
+        printf("Proceso %d bloqueado correctamente\n", (int)pid);
+    }
 }
 
 void bi_unblock(int argc, char **argv) {
-	if (argc != 1 || argv[0] == NULL) {
-		printf("Uso: unblock <pid>\n");
-		return;
-	}
-	pid_t pid = (pid_t) atoi(argv[0]);
-	sys_setReadyProcess(pid);
+    if (argc < 1 || argv[0] == NULL) {
+        printf("Uso: unblock <pid>\n");
+        return;
+    }
+    pid_t pid = (pid_t) atoi(argv[0]);
+    sys_setReadyProcess(pid);
 }
 
 void bi_kill(int argc, char **argv) {
@@ -117,7 +132,7 @@ void bi_kill(int argc, char **argv) {
 }
 
 void bi_nice(int argc, char **argv) {
-    if (argc != 2 || argv[0] == NULL || argv[1] == NULL) {
+    if (argc < 2 || argv[0] == NULL || argv[1] == NULL) {
         printf("Uso: nice <pid> <priority>\n");
         return;
     }
@@ -126,11 +141,11 @@ void bi_nice(int argc, char **argv) {
     int priority = (int) strtoi(argv[1], NULL);
 
     if (pid == 0 || pid == 1) {
-        printf("No pueden cambiarse las prioridades de la shell o idle\n");
+        printf("No se pueden cambiar las prioridades de idle o de la shell.\n");
         return;
     }
-    if (pid < 0) {
-        printf("pid debe ser mayor que 1\n");
+    if (priority < MIN_PRIORITY || priority > MAX_PRIORITY) {
+        printf("Prioridad invalida (rango %d..%d)\n", MIN_PRIORITY, MAX_PRIORITY);
         return;
     }
 

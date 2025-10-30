@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+#define MIN_PRIORITY 1
+#define MAX_PRIORITY 10
+
 /* Tipo para identificador de procesos en userland */
 typedef int16_t pid_t;
 

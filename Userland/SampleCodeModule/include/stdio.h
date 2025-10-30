@@ -86,4 +86,7 @@ void printRegisters(const uint64_t *rsp);
  */
 void printfc(Color color, char *fmt, ...);
 
+
+int read_line(char *dst, int maxlen);
+
 #endif
