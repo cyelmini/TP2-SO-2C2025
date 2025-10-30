@@ -1,4 +1,4 @@
-GLOBAL setupStackFrame
+global setupStackFrame
 
 section .text
 
@@ -6,7 +6,7 @@ setupStackFrame:
     push rbp
     mov rbp, rsp
 
-    mov rsp, rdi
+    mov rsp, rdi ; stack base
     and rsp, -16
     push 0x0
     push rdi
