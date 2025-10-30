@@ -82,14 +82,15 @@ SECTION .text
 
 
 %macro exceptionHandler 1
-	pushState ; Se cargan 15 registros en stack
+pushState
 
+	; Calcula punteros a RIP y RSP guardados en la pila (después de pushState)
 	mov rsi, rsp
-	add rsi, 15*8 ; RIP 
+	add rsi, 15*8    ; RSI -> &RIP (offset donde el iret/return address está)
 	mov rdx, rsp
-	add rdx, 18*8 ; RSP 
+	add rdx, 18*8    ; RDX -> &RSP guardado
 
-	mov rdi, %1 ; pasaje de parametro
+	mov rdi, %1 ; pasaje de parametro (numero de excepción)
 	call exceptionDispatcher
 
 	popState
@@ -218,3 +219,4 @@ callTimerTick:
 
 SECTION .bss
 	aux resq 1
+	exceptregs resq 18	; registros para la excepcion
