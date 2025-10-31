@@ -1,4 +1,4 @@
-#include "include/shellFunctions.h"
+#include "include/shellfunctions.h"
 #include "include/shell.h"
 #include "include/stdio.h"
 #include "include/stdlib.h"
@@ -10,7 +10,6 @@
 
 typedef uint64_t (*fn)(uint64_t argc, char **argv);
 
-static uint64_t echo(int argc, char **argv);
 static uint64_t clear(int argc, char **argv);
 static uint64_t ps(int argc, char **argv);
 static uint64_t loop(int argc, char **argv);
@@ -35,7 +34,6 @@ void bi_help(int argc, char **argv) {
 		"-------------BUILT-INS-------------\n"
 		"help                       Muestra el listado de comandos disponibles.\n"
 		"font-size                  Cambia el tamaño de la fuente. Uso: font-size <número>.\n"
-		"exit                       Cierra la shell actual.\n"
 		"block                      Bloquea un proceso dado su ID.\n"
 		"unblock                    Desbloquea un proceso dado su ID.\n"
 		"kill                       Mata un proceso dado su ID.\n"
@@ -44,7 +42,6 @@ void bi_help(int argc, char **argv) {
 
 		"-------------APLICACIONES DE USUARIO-------------\n"
 		"clear                      Limpia completamente la pantalla.\n"
-		"echo                       Imprime los argumentos pasados por parametro.\n"
 		"ps                         Lista todos los procesos en ejecucion con sus propiedades.\n"
 		"loop                       Imprime su ID con un saludo cada cierta cantidad de segundos.\n"
 		"cat                     	Imprime el contenido recibido por la entrada estándar (stdin).\n"
@@ -77,13 +74,6 @@ void bi_fontSize(int argc, char **argv) {
 		return;
 	}
 	sys_setFontSize((uint8_t) v);
-}
-
-void bi_exit(int argc, char **argv) {
-	(void) argc;
-	(void) argv;
-	uint64_t mypid = sys_getPid();
-	sys_killProcess((pid_t) mypid);
 }
 
 void bi_block(int argc, char **argv) {
@@ -186,29 +176,10 @@ static uint64_t clear(int argc, char **argv) {
 	sys_clear();
 	return 0;
 }
-/* ------------------------ ECHO ------------------------ */
-
-pid_t handle_echo(char *arg, int stdin, int stdout) {
-	char *argv[] = {arg};
-	int16_t fds[] = {stdin, stdout, STDERR};
-	uint8_t priority = 1;
-	char ground = 0;
-
-	return (pid_t) sys_createProcess((uint64_t) echo, argv, 1, priority, ground, fds);
-}
-
-uint64_t echo(int argc, char **argv) {
-	if (argc == 0) {
-		return 1;
-	}
-	printf("%s\n", *argv);
-	return 0;
-}
 
 /* ------------------------ PS ------------------------ */
 
 pid_t handle_ps(char *arg, int stdin, int stdout) {
-	(void) arg;
 	char *argv[] = {NULL};
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;

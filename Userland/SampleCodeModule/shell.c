@@ -1,7 +1,7 @@
 #include "include/shell.h"
 #include "include/libasm.h"
 #include "include/man.h"
-#include "include/shellFunctions.h"
+#include "include/shellfunctions.h"
 #include "include/stdio.h"
 #include "include/stdlib.h"
 #include "include/string.h"
@@ -12,7 +12,7 @@
 
 #define MAX_CHARS 256
 #define BUFFER 1000
-#define IS_BUILT_IN(i) ((i) >= HELP && (i) <= EXIT)
+#define IS_BUILT_IN(i) ((i) >= HELP && (i) <= FONT_SIZE)
 #define CANT_INSTRUCTIONS 21
 #define MAX_ARGS 16
 
@@ -27,11 +27,9 @@ typedef enum {
 	UNBLOCK,
 	NICE,
 	FONT_SIZE,
-	EXIT,
 
 	// user apps
 	CLEAR,
-	ECHO,
 	PS,
 	LOOP,
 	CAT,
@@ -46,7 +44,8 @@ typedef enum {
 } instructions;
 
 pid_t (*instruction_handlers[CANT_INSTRUCTIONS - 8])(char *, int, int) = {
-	handle_clear,		handle_echo,		   handle_ps,
+	handle_clear,
+	handle_ps,
 	handle_loop,
 	handle_cat,	   // todavia no
 	handle_wc,	   // todavia no
@@ -58,12 +57,11 @@ pid_t (*instruction_handlers[CANT_INSTRUCTIONS - 8])(char *, int, int) = {
 };
 
 void (*built_in_handlers[])(int, char **) = {bi_help,	 bi_mem,  bi_kill,	   bi_block,
-											 bi_unblock, bi_nice, bi_fontSize, bi_exit};
+											 bi_unblock, bi_nice, bi_fontSize};
 
 static char *instruction_list[] = {"help",	"mem",	   "kill",	   "block",	   "unblock",  "nice",		"font-size",
-								   "exit",
 
-								   "clear", "echo",	   "ps",	   "loop",	   "cat",	   "wc",		"filter",
+								   "clear",    "ps",	   "loop",	   "cat",	   "wc",		"filter",
 								   "mvar",	"testmem", "testproc", "testprio", "testsync", "testnosync"};
 
 int get_instruction_num(char *instruction) {
@@ -217,11 +215,6 @@ void run_shell() {
             } break;
 
             case 1: {
-                if (pipe_cmd->cmd1.instruction == EXIT) {
-                    sys_mm_free(pipe_cmd->cmd1.arguments);
-                    sys_mm_free(pipe_cmd);
-                    return;
-                }
                 pid_t pid = instruction_handlers[pipe_cmd->cmd1.instruction - CLEAR](
                                 pipe_cmd->cmd1.arguments, STDIN, STDOUT);
                 if (pid < 0) {
@@ -230,6 +223,7 @@ void run_shell() {
                     printf("Proceso %s ejecutado en background.\n",
                            instruction_list[pipe_cmd->cmd1.instruction]);
                 } else {
+					sys_setReadyProcess(pid);
                     sys_waitProcess(pid);
                     printf("Proceso %d terminado.\n", pid);
                 }

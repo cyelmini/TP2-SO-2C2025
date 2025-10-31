@@ -32,7 +32,6 @@ void bi_block(int argc, char **argv);
 void bi_unblock(int argc, char **argv);
 void bi_nice(int argc, char **argv);
 void bi_fontSize(int argc, char **argv);
-void bi_exit(int argc, char **argv);
 
 /* -------------------------------------------------------------------
    USER-SPACE APPLICATION HANDLERS
@@ -49,7 +48,6 @@ void bi_exit(int argc, char **argv);
  *   - pid < 0  → error
  */
 pid_t handle_clear(char *arg, int stdin, int stdout);
-pid_t handle_echo(char *arg, int stdin, int stdout);
 pid_t handle_ps(char *arg, int stdin, int stdout);
 pid_t handle_loop(char *arg, int stdin, int stdout);
 pid_t handle_cat(char *arg, int stdin, int stdout);
