@@ -230,6 +230,7 @@ void run_shell() {
 						printf("Proceso %s ejecutado en background.\n", instruction_list[pipe_cmd->cmd1.instruction]);
 					}
 					else {
+						sys_setReadyProcess(pid);
 						sys_waitProcess(pid);
 						printf("Proceso %d terminado.\n", pid);
 					}
