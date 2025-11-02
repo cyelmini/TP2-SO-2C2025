@@ -38,7 +38,7 @@ void createScheduler() {
 
 	int16_t fileDescriptors[] = {-1, -1, STDERR};
 
-	createProcess((uint64_t) idle, argsIdle, 1, MIN_PRIORITY, fileDescriptors, 0);
+	createProcess((uint64_t) idle, argsIdle, 1, MIN_PRIORITY, fileDescriptors, 1);
 }
 
 uint64_t schedule(uint64_t prevRSP) {
