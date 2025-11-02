@@ -367,8 +367,8 @@ static int64_t kill(schedulerADT scheduler, ProcessContext *process) {
 	ProcessContext *aux;
 	while (hasNext(process->waitingList)) {
 		aux = nextInList(process->waitingList);
-		if(setReadyProcess(aux->pid) == -1) {
-			return -1;
+		if(aux != NULL) {
+			setReadyProcess(aux->pid);
 		}
 	}
 	if (removeNode(scheduler->processList, process) == NULL) {

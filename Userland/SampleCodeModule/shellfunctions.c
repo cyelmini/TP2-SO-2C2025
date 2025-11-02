@@ -163,7 +163,7 @@ void bi_mem(int argc, char **argv) {
 /* ------------------------ CLEAR ------------------------ */
 pid_t handle_clear(char *arg, int stdin, int stdout) {
 	(void) arg;
-	char *argv[] = {NULL};
+	char *argv[] = {clear};
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
 	char ground = 0;
@@ -180,7 +180,7 @@ static uint64_t clear(int argc, char **argv) {
 /* ------------------------ PS ------------------------ */
 
 pid_t handle_ps(char *arg, int stdin, int stdout) {
-	char *argv[] = {NULL};
+	char *argv[] = {ps};
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
 	char ground = 0; 

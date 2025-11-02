@@ -15,47 +15,26 @@ int initializeProcess(ProcessContext *process, int16_t pid, char **args, int arg
 	if (process->stackBase - STACK_SIZE == 0) {
 		return -1;
 	}
+	process->argc = argc;
 
-	if (argc > 0 && (args == NULL || args[0] == NULL)) {
+	process->argv = allocArgv(process, args, argc);
+	if(process->argv == NULL) {
 		mm_free((void *) (process->stackBase - STACK_SIZE));
 		return -1;
 	}
-
-	process->argc = argc;
 	
-	if (argc > 0 && args != NULL) {
-		process->argv = allocArgv(process, args, argc);
-		if (process->argv == NULL) {
-			mm_free((void *) (process->stackBase - STACK_SIZE));
-			return -1;
-		}
-	} else {
-		process->argv = NULL;
+	process->name = mm_alloc(my_strlen(args[0]) + 1);
+	if(process->name == NULL) {
+		freeArgv(process, process->argv, process->argc);
+		mm_free((void *) (process->stackBase - STACK_SIZE));
+		return -1;
 	}
-
+	my_strcpy(process->name, args[0]);
+	process->priority = priority;
+	process->pid = pid;
 	process->rip = rip;
 	process->stackPos = setupStackFrame(process->stackBase, process->rip, argc, process->argv);
 
-	if (argc > 0 && args != NULL && args[0] != NULL) {
-		process->name = mm_alloc(my_strlen(args[0]) + 1);
-		if (process->name == NULL) {
-			freeArgv(process, process->argv, process->argc);
-			mm_free((void *) (process->stackBase - STACK_SIZE));
-			return -1;
-		}
-		my_strcpy(process->name, args[0]);
-	} else {
-		process->name = mm_alloc(my_strlen(args[0]) + 1);
-		if (process->name == NULL) {
-			freeArgv(process, process->argv, process->argc);
-			mm_free((void *) (process->stackBase - STACK_SIZE));
-			return -1;
-		}
-		my_strcpy(process->name, "unnamed");
-	};
-
-	process->priority = priority;
-	process->pid = pid;
 	if (process->pid > 1) {
 		process->status = BLOCKED;
 	}
