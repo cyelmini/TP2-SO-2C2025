@@ -34,7 +34,6 @@ int initializeProcess(ProcessContext *process, int16_t pid, char **args, int arg
 	process->pid = pid;
 	process->rip = rip;
 	process->stackPos = setupStackFrame(process->stackBase, process->rip, argc, process->argv);
-	printf("%d\n", process->stackPos);
 
 	process->status = READY;
 

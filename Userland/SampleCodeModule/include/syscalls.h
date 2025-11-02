@@ -177,4 +177,9 @@ void sys_yield();
  */
 int sys_waitProcess(int16_t pid);
 
+/**
+ * @brief Termina el proceso actual de forma controlada
+ */
+void sys_exit();
+
 #endif

@@ -67,14 +67,16 @@ uint64_t schedule(uint64_t prevRSP) {
 	}
 
 	if (scheduler->currentProcess != NULL) {
-		scheduler->currentProcess->stackPos = prevRSP;
-		if (scheduler->currentProcess->status == RUNNING) {
-			scheduler->currentProcess->status = READY;
-			addNode(scheduler->readyProcess, scheduler->currentProcess);
-		} else if (scheduler->currentProcess->status == TERMINATED) {
+		if (scheduler->currentProcess->status == TERMINATED) {
 			freeProcess(scheduler->currentProcess);
 			scheduler->currentProcess = NULL;
-            scheduler->currentPid = NO_PROCESS;
+			scheduler->currentPid = NO_PROCESS;
+		} else {
+			scheduler->currentProcess->stackPos = prevRSP;
+			if (scheduler->currentProcess->status == RUNNING) {
+				scheduler->currentProcess->status = READY;
+				addNode(scheduler->readyProcess, scheduler->currentProcess);
+			}
 		}
 	}
 
@@ -165,7 +167,11 @@ ProcessInfo *ps(uint16_t *processQty) {
 		if (aux->name != NULL) {
 			array[i].name = (char *) mm_alloc(my_strlen(aux->name) + 1);
 			if (array[i].name == NULL) {
-				mm_free(array[i].name);
+				for (int j = 0; j < i; j++) {
+					if (array[j].name != NULL) {
+						mm_free(array[j].name);
+					}
+				}
 				mm_free(array);
 				*processQty = 0;
 				return NULL;

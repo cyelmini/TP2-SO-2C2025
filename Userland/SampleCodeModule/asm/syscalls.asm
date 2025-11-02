@@ -24,6 +24,7 @@ GLOBAL sys_blockProcess
 GLOBAL sys_setReadyProcess
 GLOBAL sys_yield
 GLOBAL sys_waitProcess
+GLOBAL sys_exit
 
 sys_read:
     mov rax, 0
@@ -149,3 +150,9 @@ sys_waitProcess:
     mov rax, 24
     int 80h
     ret
+
+sys_exit:
+    mov rax, 25
+    int 80h
+    ret
+

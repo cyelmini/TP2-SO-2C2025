@@ -9,7 +9,7 @@
 #include "include/video.h"
 #include <stdint.h>
 
-#define SYSCALL_COUNT 25
+#define SYSCALL_COUNT 26
 
 // File Descriptors
 #define STDIN 0
@@ -43,6 +43,7 @@
 #define READY_PS 22
 #define YIELD 23
 #define WAIT_PS 24
+#define EXIT 25
 
 static uint8_t syscall_read(uint32_t fd);
 
@@ -83,6 +84,8 @@ static uint64_t syscall_getPid();
 
 static ProcessInfo *syscall_process_info(uint16_t *processQty);
 
+static void syscall_exit();
+
 typedef uint64_t (*syscall)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
 
 static const syscall syscalls[] = {
@@ -111,6 +114,7 @@ static const syscall syscalls[] = {
 	(syscall) setReadyProcess,
 	(syscall) yield,
 	(syscall) waitProcess,
+	(syscall) syscall_exit,
 };
 
 uint64_t syscallDispatcher(uint64_t nr, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
@@ -218,3 +222,9 @@ static uint64_t syscall_getPid() {
 static ProcessInfo *syscall_process_info(uint16_t *processQty) {
 	return ps(processQty);
 }
+
+static void syscall_exit() {
+	killCurrentProcess();
+	yield();
+}
+

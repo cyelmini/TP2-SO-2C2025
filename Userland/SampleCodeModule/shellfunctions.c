@@ -70,7 +70,7 @@ void bi_fontSize(int argc, char **argv) {
 	}
 	int v = strtoi((char *) argv[0], NULL);
 	if (v < MIN_FONT_SIZE || v > MAX_FONT_SIZE) {
-		printf("Tamaño inválido. Rango: %d..%d\n", MIN_FONT_SIZE, MAX_FONT_SIZE);
+		printf("Tamaño invalido. Rango: %d..%d\n", MIN_FONT_SIZE, MAX_FONT_SIZE);
 		return;
 	}
 	sys_setFontSize((uint8_t) v);
@@ -174,6 +174,7 @@ static uint64_t clear(int argc, char **argv) {
 	(void) argc;
 	(void) argv;
 	sys_clear();
+	sys_exit();
 	return 0;
 }
 
@@ -193,8 +194,10 @@ static uint64_t ps(int argc, char **argv) {
 
     uint16_t qty = 0;
     ProcessInfo *list = sys_processInfo(&qty);
-    if (!list)
+    if (!list) {
+        sys_exit();
         return 0;
+    }
 
     for (uint16_t i = 0; i < qty; i++) {
         printf("PID:%d  NAME:%s  STATUS:%d  PRIO:%d\n",
@@ -208,6 +211,7 @@ static uint64_t ps(int argc, char **argv) {
         }
     }
     sys_mm_free(list);
+    sys_exit();
     return 0;
 }
 
@@ -280,8 +284,13 @@ pid_t handle_mvar(char *arg, int stdin, int stdout) {
 /* ------------------------ TEST_MM ------------------------ */
 
 pid_t handle_test_mm(char *arg, int stdin, int stdout) {
+	if (!arg || !(*arg)) {
+		printf("Uso: testmem <max_memory>\n");
+		return -1;
+	}
+
 	char *argv[] = {arg};
-	int argc = (arg && *arg) ? 1 : 0;
+	int argc = 1;
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
 	char ground = 0;
@@ -293,15 +302,16 @@ static uint64_t run_test_mm(int argc, char **argv) {
 	printf("[test_mm] Iniciando test del administrador de memoria...\n");
 
 	if (argc > 0 && argv[0] && *argv[0])
-		printf("Tamaño máximo de prueba: %s bytes\n", argv[0]);
+		printf("Tamanio maximo de prueba: %s bytes\n", argv[0]);
 
 	uint64_t result = test_mm(argc, argv);
 
 	if (result == 0)
 		printf("[test_mm] Finalizado exitosamente.\n");
 	else
-		printf("[test_mm] Falló con código: %d\n", (int) result);
+		printf("[test_mm] Fallo con codigo: %d\n", (int) result);
 
+	sys_exit();
 	return 0;
 }
 
@@ -331,8 +341,9 @@ static uint64_t run_test_processes(int argc, char **argv) {
 	if (result == 0)
 		printf("[test_processes] Completado exitosamente.\n");
 	else
-		printf("[test_processes] Falló con código: %d\n", (int) result);
+		printf("[test_processes] Fallo con codigo: %d\n", (int) result);
 
+	sys_exit();
 	return 0;
 }
 
@@ -363,8 +374,9 @@ static uint64_t run_test_priority(int argc, char **argv) {
 	if (result == 0) {
 		printf("[test_priority] Test completado exitosamente.\n");
 	} else {
-		printf("[test_priority] Falló con código: %d\n", (int) result);
+		printf("[test_priority] Fallo con codigo: %d\n", (int) result);
 	}
+	sys_exit();
 	return 0;
 }
 
