@@ -163,11 +163,11 @@ void bi_mem(int argc, char **argv) {
 /* ------------------------ CLEAR ------------------------ */
 pid_t handle_clear(char *arg, int stdin, int stdout) {
 	(void) arg;
-	char *argv[] = {clear};
+	char *argv[] = {"clear"};
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
 	char ground = 0;
-	return (pid_t) sys_createProcess((uint64_t) clear, argv, 0, priority, ground, fds);
+	return (pid_t) sys_createProcess((uint64_t) clear, argv, 1, priority, ground, fds);
 }
 
 static uint64_t clear(int argc, char **argv) {
@@ -180,11 +180,11 @@ static uint64_t clear(int argc, char **argv) {
 /* ------------------------ PS ------------------------ */
 
 pid_t handle_ps(char *arg, int stdin, int stdout) {
-	char *argv[] = {ps};
+	char *argv[] = {"ps"};
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
 	char ground = 0; 
-	return (pid_t) sys_createProcess((uint64_t) ps, argv, 0, priority, ground, fds);
+	return (pid_t) sys_createProcess((uint64_t) ps, argv, 1, priority, ground, fds);
 }
 
 static uint64_t ps(int argc, char **argv) {
@@ -211,6 +211,9 @@ static uint64_t ps(int argc, char **argv) {
     return 0;
 }
 
+typedef uint64_t (*fnptr)(uint64_t argc, char **argv);
+
+
 /* ------------------------ LOOP ------------------------ */
 
 static void sleep_seconds(uint32_t s) {
@@ -223,8 +226,18 @@ static void sleep_seconds(uint32_t s) {
 }
 
 pid_t handle_loop(char *arg, int stdin, int stdout) {
-	char *argv[] = {arg}; /* puede venir NULL si no pasan segundos */
-	int argc = (arg && *arg) ? 1 : 0;
+	int argc;
+	char *argv[2];
+
+	if (arg != NULL) {
+        argv [0]= "loop";
+		argv[1] = arg;
+        argc = 2;
+    } else {
+        argv [0]= "loop";
+		argv[1] = NULL;
+        argc = 1;
+    }
 
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;

@@ -34,13 +34,9 @@ int initializeProcess(ProcessContext *process, int16_t pid, char **args, int arg
 	process->pid = pid;
 	process->rip = rip;
 	process->stackPos = setupStackFrame(process->stackBase, process->rip, argc, process->argv);
+	printf("%d\n", process->stackPos);
 
-	if (process->pid > 1) {
-		process->status = BLOCKED;
-	}
-	else {
-		process->status = READY;
-	}
+	process->status = READY;
 
 	for (int i = 0; i < CANT_FILE_DESCRIPTORS; i++) {
 		process->fileDescriptors[i] = fileDescriptors[i];

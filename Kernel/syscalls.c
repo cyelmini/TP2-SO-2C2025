@@ -190,7 +190,7 @@ static void syscall_setFontColor(uint8_t r, uint8_t g, uint8_t b) {
 }
 
 static uint32_t syscall_getFontColor() {
-	ColorInt c = {color: getFontColor()};
+	ColorInt c = {.color = getFontColor()};
 	return c.bits;
 }
 

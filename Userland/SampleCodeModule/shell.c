@@ -217,20 +217,19 @@ void run_shell() {
             case 1: {
                 pid_t pid = instruction_handlers[pipe_cmd->cmd1.instruction - CLEAR](
                                 pipe_cmd->cmd1.arguments, STDIN, STDOUT);
+
                 if (pid < 0) {
                     printErr("Error al ejecutar el comando.\n");
                 } else if (pid == 0) {
                     printf("Proceso %s ejecutado en background.\n",
                            instruction_list[pipe_cmd->cmd1.instruction]);
                 } else {
-					sys_setReadyProcess(pid);
                     sys_waitProcess(pid);
                     printf("Proceso %d terminado.\n", pid);
                 }
                 sys_mm_free(pipe_cmd->cmd1.arguments);
                 sys_mm_free(pipe_cmd);
             } break;
-
             case 2:
                 handle_piped_commands(pipe_cmd);
                 break;
