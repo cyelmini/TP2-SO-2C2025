@@ -20,6 +20,7 @@ void zero_to_max() {
 		;
 
 	printf("PROCESS %d DONE!\n", sys_getPid());
+	sys_exit();
 }
 
 uint64_t test_prio(uint64_t argc, char *argv[]) {

@@ -182,4 +182,6 @@ int sys_waitProcess(int16_t pid);
  */
 void sys_exit();
 
+void sys_sleep(uint32_t s);
+
 #endif

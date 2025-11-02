@@ -5,48 +5,65 @@
 #include <stdint.h>
 #include <stdio.h>
 
-static void freeArgv(ProcessContext *pcb, char **argv, int argc);
-static char **allocArgv(ProcessContext *pc, char **argv, int argc);
+static void freeArgv(char **argv, int argc);
+static char **allocArgv(char **argv, int argc);
 
 int initializeProcess(ProcessContext *process, int16_t pid, char **args, int argc, uint8_t priority, uint64_t rip,
 					  char ground, int16_t fileDescriptors[]) {
-	
-	process->stackBase = (uint64_t) mm_alloc(STACK_SIZE) + STACK_SIZE;
-	if (process->stackBase - STACK_SIZE == 0) {
-		return -1;
-	}
+	process->stackBase = 0;
+	process->stackPos = 0;
+	process->argv = NULL;
 	process->argc = argc;
-
-	process->argv = allocArgv(process, args, argc);
-	if(process->argv == NULL) {
-		mm_free((void *) (process->stackBase - STACK_SIZE));
-		return -1;
-	}
-	
-	process->name = mm_alloc(my_strlen(args[0]) + 1);
-	if(process->name == NULL) {
-		freeArgv(process, process->argv, process->argc);
-		mm_free((void *) (process->stackBase - STACK_SIZE));
-		return -1;
-	}
-	my_strcpy(process->name, args[0]);
+	process->name = NULL;
 	process->priority = priority;
 	process->pid = pid;
 	process->rip = rip;
+	process->ground = ground;
+	process->waitingList = NULL;
+	process->status = READY;
+	process->quantumTicks = 0;
+
+	process->stackBase = (uint64_t) mm_alloc(STACK_SIZE);
+	if (process->stackBase == 0) {
+		return -1;
+	}
+	process->stackBase += STACK_SIZE;
+
+	process->argv = allocArgv(args, argc);
+	if (process->argv == NULL) {
+		mm_free((void *) (process->stackBase - STACK_SIZE));
+		process->stackBase = 0;
+		return -1;
+	}
+
+	const char *name = "process";
+	if (argc > 0 && args != NULL && args[0] != NULL) {
+		name = args[0];
+	}
+
+	process->name = mm_alloc(my_strlen(name) + 1);
+	if (process->name == NULL) {
+		freeArgv(process->argv, process->argc);
+		process->argv = NULL;
+		mm_free((void *) (process->stackBase - STACK_SIZE));
+		process->stackBase = 0;
+		return -1;
+	}
+	my_strcpy(process->name, name);
 	process->stackPos = setupStackFrame(process->stackBase, process->rip, argc, process->argv);
 
-	process->status = READY;
-
 	for (int i = 0; i < CANT_FILE_DESCRIPTORS; i++) {
-		process->fileDescriptors[i] = fileDescriptors[i];
+		process->fileDescriptors[i] = (fileDescriptors != NULL) ? fileDescriptors[i] : i;
 	}
-	process->ground = ground;
 
 	process->waitingList = createDoubleLinkedListADT();
 	if (process->waitingList == NULL) {
 		mm_free(process->name);
-		freeArgv(process, process->argv, process->argc);
+		process->name = NULL;
+		freeArgv(process->argv, process->argc);
+		process->argv = NULL;
 		mm_free((void *) (process->stackBase - STACK_SIZE));
+		process->stackBase = 0;
 		return -1;
 	}
 
@@ -54,10 +71,30 @@ int initializeProcess(ProcessContext *process, int16_t pid, char **args, int arg
 }
 
 void freeProcess(ProcessContext *pcb) {
-	freeArgv(pcb, pcb->argv, pcb->argc);
-	mm_free(pcb->name);
-	mm_free((void *) (pcb->stackBase - STACK_SIZE));
-	freeLinkedListADT(pcb->waitingList);
+	if (pcb == NULL) {
+		return;
+	}
+
+	if (pcb->argv != NULL) {
+		freeArgv(pcb->argv, pcb->argc);
+		pcb->argv = NULL;
+	}
+
+	if (pcb->name != NULL) {
+		mm_free(pcb->name);
+		pcb->name = NULL;
+	}
+
+	if (pcb->stackBase >= STACK_SIZE) {
+		mm_free((void *) (pcb->stackBase - STACK_SIZE));
+		pcb->stackBase = 0;
+	}
+
+	if (pcb->waitingList != NULL) {
+		freeLinkedListADT(pcb->waitingList);
+		pcb->waitingList = NULL;
+	}
+
 	mm_free(pcb);
 }
 
@@ -90,7 +127,7 @@ int changeFileDescriptors(int16_t pid, int16_t fileDescriptors[]) {
 	return 0;
 }
 
-static void freeArgv(ProcessContext *pcb, char **argv, int argc) {
+static void freeArgv(char **argv, int argc) {
 	if (argv == NULL) {
 		return;
 	}
@@ -104,8 +141,16 @@ static void freeArgv(ProcessContext *pcb, char **argv, int argc) {
 	mm_free(argv);
 }
 
-static char **allocArgv(ProcessContext *pc, char **argv, int argc) {
-	if (argc <= 0 || argv == NULL) {
+static char **allocArgv(char **argv, int argc) {
+	if (argc <= 0) {
+		char **emptyArgv = mm_alloc(sizeof(char *));
+		if (emptyArgv != NULL) {
+			emptyArgv[0] = NULL;
+		}
+		return emptyArgv;
+	}
+
+	if (argv == NULL) {
 		return NULL;
 	}
 

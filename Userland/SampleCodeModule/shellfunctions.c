@@ -220,15 +220,6 @@ typedef uint64_t (*fnptr)(uint64_t argc, char **argv);
 
 /* ------------------------ LOOP ------------------------ */
 
-static void sleep_seconds(uint32_t s) {
-	if (s == 0)
-		return;
-	uint32_t start = sys_getSeconds();
-	while ((uint32_t) ((sys_getSeconds() + 86400 - start) % 86400) < s) {
-		sys_yield();
-	}
-}
-
 pid_t handle_loop(char *arg, int stdin, int stdout) {
 	int argc;
 	char *argv[2];
@@ -261,7 +252,7 @@ static uint64_t loop(int argc, char **argv) {
 	uint64_t mypid = sys_getPid();
 	while (1) {
 		printf("[loop] Hola! soy PID=%d\n", (int) mypid);
-		sleep_seconds(interval);
+		sys_sleep(interval);
 	}
 	return 0;
 }
@@ -333,8 +324,6 @@ pid_t handle_test_processes(char *arg, int stdin, int stdout) {
 }
 
 static uint64_t run_test_processes(int argc, char **argv) {
-	(void) argc;
-	(void) argv;
 	printf("[test_processes] Creando, bloqueando y matando procesos dummy...\n");
 	uint64_t result = test_processes(argc, argv);
 
@@ -366,8 +355,6 @@ pid_t handle_test_priority(char *arg, int stdin, int stdout) {
 }
 
 static uint64_t run_test_priority(int argc, char **argv) {
-	(void) argc;
-	(void) argv;
 	printf("[test_priority] Iniciando prueba de scheduling por prioridad...\n");
 	uint64_t result = test_prio(argc, argv);
 

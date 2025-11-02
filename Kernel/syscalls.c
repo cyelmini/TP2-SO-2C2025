@@ -86,6 +86,8 @@ static ProcessInfo *syscall_process_info(uint16_t *processQty);
 
 static void syscall_exit();
 
+static void syscall_sleep(uint32_t s);
+
 typedef uint64_t (*syscall)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
 
 static const syscall syscalls[] = {
@@ -115,6 +117,7 @@ static const syscall syscalls[] = {
 	(syscall) yield,
 	(syscall) waitProcess,
 	(syscall) syscall_exit,
+	(syscall) syscall_sleep,
 };
 
 uint64_t syscallDispatcher(uint64_t nr, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
@@ -228,3 +231,11 @@ static void syscall_exit() {
 	yield();
 }
 
+static void syscall_sleep(uint32_t s){
+	if (s == 0)
+		return;
+	uint32_t start = syscall_seconds();
+	while ((uint32_t) ((syscall_seconds() + 86400 - start) % 86400) < s) {
+		yield();
+	}
+}

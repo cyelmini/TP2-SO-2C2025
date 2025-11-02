@@ -116,6 +116,8 @@ int16_t createProcess(uint64_t rip, char **args, int argc, uint8_t priority, int
 		return -1;
 	}
 
+	memset(newProcess, 0, sizeof(ProcessContext));
+
 	if (initializeProcess(newProcess, scheduler->nextPid, args, argc, priority, rip, ground, fileDescriptors) == -1) {
 		freeProcess(newProcess);
 		return -1;
