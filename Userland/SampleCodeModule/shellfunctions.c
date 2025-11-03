@@ -13,10 +13,14 @@ typedef uint64_t (*fn)(uint64_t argc, char **argv);
 static uint64_t clear(int argc, char **argv);
 static uint64_t ps(int argc, char **argv);
 static uint64_t loop(int argc, char **argv);
-/* cat, wc, filter, mvar no estan implementadas*/
+static uint64_t cat(int argc, char **argv);
+static uint64_t wc(int argc, char **argv);
+static int is_vowel(char c);
+static uint64_t filter(int argc, char **argv);
 static uint64_t run_test_mm(int argc, char **argv);
 static uint64_t run_test_processes(int argc, char **argv);
 static uint64_t run_test_priority(int argc, char **argv);
+static uint64_t run_test_sync(int argc, char **argv);
 
 /* ------------------------ Funciones built-in de la shell ------------------------ */
 
@@ -55,10 +59,10 @@ void bi_help(int argc, char **argv) {
 		"testproc                   Crea, bloquea, desbloquea y mata procesos dummy aleatoriamente.\n"
 		"testprio                   Crea 3 procesos que incrementan una variable desde 0 hasta un valor dado, "
 		"mostrando las diferencias segun su prioridad.\n"
-		"testsync                   Prueba la sincronizacion usando semaforos. Uso: TEST_SYNCHRO <iteraciones> "
+		"testsync                   Prueba la sincronizacion usando semaforos. Uso: testsync <iteraciones> "
 		"<usar_sem>.\n"
-		"testnosync                 Prueba la ausencia de sincronizacion. Uso: TEST_NOSYNCHRO <iteraciones>.\n"
-		"mvar                       Prueba las variables compartidas entre procesos.\n";
+		"                           - <iteraciones>: numero de incrementos/decrementos por proceso\n"
+		"                           - <usar_sem>: 1 = con semaforos (resultado estable), 0 = sin semaforos (race condition)\n";
 
 	printf("%s", manual);
 }
@@ -145,8 +149,7 @@ void bi_nice(int argc, char **argv) {
     }
 }
 
-void bi_mem(int argc, char **argv) {
-	(void) argv;
+void bi_mem(int argc) {
 	if (argc != 0) {
 		printf("Uso: mem\n");
 		return;
@@ -161,8 +164,8 @@ void bi_mem(int argc, char **argv) {
 /* ------------------------ Funciones de aplicaciones de User Space ------------------------ */
 
 /* ------------------------ CLEAR ------------------------ */
-pid_t handle_clear(char *arg, int stdin, int stdout) {
-	(void) arg;
+
+pid_t handle_clear(int stdin, int stdout) {
 	char *argv[] = {"clear"};
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
@@ -170,9 +173,7 @@ pid_t handle_clear(char *arg, int stdin, int stdout) {
 	return (pid_t) sys_createProcess((uint64_t) clear, argv, 1, priority, ground, fds);
 }
 
-static uint64_t clear(int argc, char **argv) {
-	(void) argc;
-	(void) argv;
+static uint64_t clear() {
 	sys_clear();
 	sys_exit();
 	return 0;
@@ -188,10 +189,7 @@ pid_t handle_ps(char *arg, int stdin, int stdout) {
 	return (pid_t) sys_createProcess((uint64_t) ps, argv, 1, priority, ground, fds);
 }
 
-static uint64_t ps(int argc, char **argv) {
-    (void) argc;
-    (void) argv;
-
+static uint64_t ps() {
     uint16_t qty = 0;
     ProcessInfo *list = sys_processInfo(&qty);
     if (!list) {
@@ -256,21 +254,98 @@ static uint64_t loop(int argc, char **argv) {
 	}
 	return 0;
 }
+/* ------------------------ CAT ------------------------ */
 
-/* ------------------------ FALTAN: implementar cuando hagamos lo de sincronizacion  ------------------------ */
+pid_t handle_cat(int stdin, int stdout) {
+	char *argv[] = {"cat"};
+	int16_t fds[] = {stdin, stdout, STDERR};
+	uint8_t priority = 1;
+	char ground = 0;
+	return (pid_t) sys_createProcess((uint64_t) cat, argv, 1, priority, ground, fds);
+}
 
-pid_t handle_cat(char *arg, int stdin, int stdout) {
-	return -1;
-} // CAT
-pid_t handle_wc(char *arg, int stdin, int stdout) {
-	return -1;
-} // WC
-pid_t handle_filter(char *arg, int stdin, int stdout) {
-	return -1;
-} // FILTER
+static uint64_t cat() {
+	char c;
+	while (1) {
+		c = (char) sys_read(STDIN);
+		if (c == 0 || c == (char) 255) { // EOF o error
+			break;
+		}
+		sys_write(STDOUT, c);
+	}
+	
+	sys_exit();
+	return 0;
+}
+
+/* ------------------------ WC ------------------------ */
+
+pid_t handle_wc(int stdin, int stdout) {
+	char *argv[] = {"wc"};
+	int16_t fds[] = {stdin, stdout, STDERR};
+	uint8_t priority = 1;
+	char ground = 0;
+	return (pid_t) sys_createProcess((uint64_t) wc, argv, 1, priority, ground, fds);
+}
+
+static uint64_t wc() {
+	int lineCount = 0;
+	char c;
+	
+	while (1) {
+		c = (char) sys_read(STDIN);
+		if (c == 0 || c == (char) 255) { // EOF o error
+			break;
+		}
+		if (c == '\n') {
+			lineCount++;
+		}
+	}
+	
+	printf("%d\n", lineCount);
+	sys_exit();
+	return 0;
+}
+
+/* ------------------------ FILTER ------------------------ */
+static int is_vowel(char c) {
+	return (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u' ||
+	        c == 'A' || c == 'E' || c == 'I' || c == 'O' || c == 'U');
+}
+
+pid_t handle_filter(int stdin, int stdout) {
+	char *argv[] = {"filter"};
+	int16_t fds[] = {stdin, stdout, STDERR};
+	uint8_t priority = 1;
+	char ground = 0;
+	return (pid_t) sys_createProcess((uint64_t) filter, argv, 1, priority, ground, fds);
+}
+
+static uint64_t filter() {
+	char c;
+	while (1) {
+		c = (char) sys_read(STDIN);
+		if (c == 0 || c == (char) 255) { // EOF o error
+			break;
+		}
+		if (!is_vowel(c)) {
+			sys_write(STDOUT, c);
+		}
+	}
+	
+	sys_exit();
+	return 0;
+}
+
+
+/* ------------------------ MVAR ------------------------ */
 pid_t handle_mvar(char *arg, int stdin, int stdout) {
+	(void) arg;
+	(void) stdin;
+	(void) stdout;
+	// TODO: Implementar más adelante
 	return -1;
-} // MVAR
+}
 
 /* ------------------------ TEST_MM ------------------------ */
 
@@ -367,11 +442,68 @@ static uint64_t run_test_priority(int argc, char **argv) {
 	return 0;
 }
 
-/* ------------------------ FALTAN: implementar cuando hagamos lo de sincronizacion  ------------------------ */
+/* ------------------------ TEST_SYNC ------------------------ */
 
 pid_t handle_test_sync(char *arg, int stdin, int stdout) {
-	return -1;
+	char *argv[3];
+	int argc = 0;
+	
+	if (!arg || !(*arg)) {
+		printf("Uso: testsync <iteraciones> <usar_sem>\n");
+		printf("  <iteraciones>: numero de incrementos/decrementos por proceso\n");
+		printf("  <usar_sem>: 1 = con semaforos, 0 = sin semaforos\n");
+		return -1;
+	}
+	
+	// Separar los dos argumentos
+	char *token = arg;
+	char *space = NULL;
+	
+	// Buscar el primer espacio
+	for (char *p = arg; *p; p++) {
+		if (*p == ' ') {
+			space = p;
+			*p = '\0'; // Terminar el primer token
+			break;
+		}
+	}
+	
+	if (!space) {
+		printf("Error: se requieren dos argumentos\n");
+		printf("Uso: testsync <iteraciones> <usar_sem>\n");
+		return -1;
+	}
+	
+	argv[0] = token;      // iteraciones
+	argv[1] = space + 1;  // usar_sem
+	argv[2] = NULL;
+	argc = 2;
+	
+	int16_t fds[] = {stdin, stdout, STDERR};
+	uint8_t priority = 1;
+	char ground = 0;
+	
+	return (pid_t) sys_createProcess((uint64_t) run_test_sync, argv, argc, priority, ground, fds);
 }
-pid_t handle_test_no_sync(char *arg, int stdin, int stdout) {
-	return -1;
+
+static uint64_t run_test_sync(int argc, char **argv) {
+	printf("[test_sync] Iniciando prueba de sincronizacion con semaforos...\n");
+	
+	if (argc > 0 && argv[0] && *argv[0]) {
+		printf("Iteraciones: %s\n", argv[0]);
+	}
+	if (argc > 1 && argv[1] && *argv[1]) {
+		printf("Usar semaforos: %s\n", argv[1]);
+	}
+	
+	uint64_t result = test_sync(argc, argv);
+	
+	if (result == 0) {
+		printf("[test_sync] Test completado exitosamente.\n");
+	} else {
+		printf("[test_sync] Fallo con codigo: %d\n", (int) result);
+	}
+	
+	sys_exit();
+	return 0;
 }

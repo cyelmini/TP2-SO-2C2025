@@ -182,6 +182,75 @@ int sys_waitProcess(int16_t pid);
  */
 void sys_exit();
 
+<<<<<<< Updated upstream
 void sys_sleep(uint32_t s);
+=======
+/**
+ * @brief Crea e inicializa un semáforo con un valor inicial
+ * @param id Identificador del semáforo (0 a 299)
+ * @param initialValue Valor inicial del contador del semáforo
+ * @return 0 si éxito, -1 si error
+ */
+int sys_sem_create(int id, uint32_t initialValue);
+
+/**
+ * @brief Verifica si un semáforo está abierto/activo
+ * @param id Identificador del semáforo
+ * @return 0 si está abierto, -1 si no existe
+ */
+int sys_sem_open(int id);
+
+/**
+ * @brief Operación wait (P) sobre un semáforo - decrementa contador o bloquea
+ * @param id Identificador del semáforo
+ * @return 0 si éxito, -1 si error
+ */
+int sys_sem_wait(int id);
+
+/**
+ * @brief Operación post (V) sobre un semáforo - incrementa contador o despierta proceso
+ * @param id Identificador del semáforo
+ * @return 0 si éxito, -1 si error
+ */
+int sys_sem_post(int id);
+
+/**
+ * @brief Destruye un semáforo y libera sus recursos
+ * @param id Identificador del semáforo
+ * @return 0 si éxito, -1 si error
+ */
+int sys_sem_destroy(int id);
+
+/**
+ * @brief Crea un nuevo pipe para comunicación entre procesos
+ * @return File descriptor del pipe creado, o -1 si error
+ */
+int sys_pipe_create();
+
+/**
+ * @brief Lee datos de un pipe (bloqueante hasta que haya datos)
+ * @param pipeId Identificador del pipe
+ * @param buffer Buffer donde escribir los datos leídos
+ * @param count Cantidad de bytes a leer
+ * @return Cantidad de bytes leídos, o -1 si error
+ */
+int sys_pipe_read(int pipeId, char *buffer, int count);
+
+/**
+ * @brief Escribe datos en un pipe (bloqueante si no hay espacio)
+ * @param pipeId Identificador del pipe
+ * @param buffer Buffer con los datos a escribir
+ * @param count Cantidad de bytes a escribir
+ * @return Cantidad de bytes escritos, o -1 si error
+ */
+int sys_pipe_write(int pipeId, const char *buffer, int count);
+
+/**
+ * @brief Cierra un pipe y libera sus recursos
+ * @param pipeId Identificador del pipe
+ * @return 0 si éxito, -1 si error
+ */
+int sys_pipe_close(int pipeId);
+>>>>>>> Stashed changes
 
 #endif

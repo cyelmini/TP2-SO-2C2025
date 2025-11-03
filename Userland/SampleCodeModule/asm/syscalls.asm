@@ -25,7 +25,19 @@ GLOBAL sys_setReadyProcess
 GLOBAL sys_yield
 GLOBAL sys_waitProcess
 GLOBAL sys_exit
+<<<<<<< Updated upstream
 GLOBAL sys_sleep
+=======
+GLOBAL sys_sem_create
+GLOBAL sys_sem_open
+GLOBAL sys_sem_wait
+GLOBAL sys_sem_post
+GLOBAL sys_sem_destroy
+GLOBAL sys_pipe_create
+GLOBAL sys_pipe_read
+GLOBAL sys_pipe_write
+GLOBAL sys_pipe_close
+>>>>>>> Stashed changes
 
 sys_read:
     mov rax, 0
@@ -157,7 +169,55 @@ sys_exit:
     int 80h
     ret
 
+<<<<<<< Updated upstream
 sys_sleep:
     mov rax, 26
     int 80h
     ret
+=======
+sys_sem_create:
+    mov rax, 26
+    int 80h
+    ret
+
+sys_sem_open:
+    mov rax, 27
+    int 80h
+    ret
+
+sys_sem_wait:
+    mov rax, 28
+    int 80h
+    ret
+
+sys_sem_post:
+    mov rax, 29
+    int 80h
+    ret
+
+sys_sem_destroy:
+    mov rax, 30
+    int 80h
+    ret
+
+sys_pipe_create:
+    mov rax, 31
+    int 80h
+    ret
+
+sys_pipe_read:
+    mov rax, 32
+    int 80h
+    ret
+
+sys_pipe_write:
+    mov rax, 33
+    int 80h
+    ret
+
+sys_pipe_close:
+    mov rax, 34
+    int 80h
+    ret
+
+>>>>>>> Stashed changes

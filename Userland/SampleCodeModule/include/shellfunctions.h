@@ -26,7 +26,7 @@ typedef struct pipecmd {
  */
 
 void bi_help(int argc, char **argv);
-void bi_mem(int argc, char **argv);
+void bi_mem(int argc);
 void bi_kill(int argc, char **argv);
 void bi_block(int argc, char **argv);
 void bi_unblock(int argc, char **argv);
@@ -47,12 +47,12 @@ void bi_fontSize(int argc, char **argv);
  *   - pid = 0  → proceso en background
  *   - pid < 0  → error
  */
-pid_t handle_clear(char *arg, int stdin, int stdout);
+pid_t handle_clear(int stdin, int stdout);
 pid_t handle_ps(char *arg, int stdin, int stdout);
 pid_t handle_loop(char *arg, int stdin, int stdout);
-pid_t handle_cat(char *arg, int stdin, int stdout);
-pid_t handle_wc(char *arg, int stdin, int stdout);
-pid_t handle_filter(char *arg, int stdin, int stdout);
+pid_t handle_cat(int stdin, int stdout);
+pid_t handle_wc(int stdin, int stdout);
+pid_t handle_filter(int stdin, int stdout);
 pid_t handle_mvar(char *arg, int stdin, int stdout);
 pid_t handle_test_mm(char *arg, int stdin, int stdout);
 pid_t handle_test_processes(char *arg, int stdin, int stdout);

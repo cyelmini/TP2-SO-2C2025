@@ -14,6 +14,8 @@
 #define BUFFER 1000
 #define IS_BUILT_IN(i) ((i) >= HELP && (i) <= FONT_SIZE)
 #define CANT_INSTRUCTIONS 21
+#define CANT_BUILTIN 7
+#define CANT_PROCESS (CANT_INSTRUCTIONS - CANT_BUILTIN -1)
 #define MAX_ARGS 16
 
 static void handle_piped_commands(pipeCmd *pipe_cmd);
@@ -39,30 +41,40 @@ typedef enum {
 	TESTMEM,
 	TESTPROC,
 	TESTPRIO,
-	TESTSYNC,
-	TESTNOSYNC
+	TESTSYNC
 } instructions;
 
-pid_t (*instruction_handlers[CANT_INSTRUCTIONS - 8])(char *, int, int) = {
-	handle_clear,
-	handle_ps,
-	handle_loop,
-	handle_cat,	   // todavia no
-	handle_wc,	   // todavia no
-	handle_filter, // todavia no
-	handle_mvar,   // todavia no
-	handle_test_mm,		handle_test_processes, handle_test_priority,
-	handle_test_sync,	// todavia no
-	handle_test_no_sync // todavia no
+typedef pid_t (*process_cmd)(char *, int, int);
+
+static const process_cmd instruction_handlers[CANT_PROCESS] = {
+	(process_cmd) handle_clear,
+	(process_cmd) handle_ps,
+	(process_cmd) handle_loop,
+	(process_cmd) handle_cat,
+	(process_cmd) handle_wc,
+	(process_cmd) handle_filter,
+	(process_cmd) handle_mvar,
+	(process_cmd) handle_test_mm,
+	(process_cmd) handle_test_processes,
+	(process_cmd) handle_test_priority,
+	(process_cmd) handle_test_sync,
 };
 
-void (*built_in_handlers[])(int, char **) = {bi_help,	 bi_mem,  bi_kill,	   bi_block,
-											 bi_unblock, bi_nice, bi_fontSize};
+typedef void (*built_in_cmd)(int, char **);
+
+static const built_in_cmd built_in_handlers[CANT_BUILTIN] = {
+	(built_in_cmd) bi_help,
+	(built_in_cmd) bi_mem,
+	(built_in_cmd) bi_kill,
+	(built_in_cmd) bi_block,
+	(built_in_cmd) bi_unblock,
+	(built_in_cmd) bi_nice,
+	(built_in_cmd) bi_fontSize,
+};
 
 static char *instruction_list[] = {"help",	"mem",	   "kill",	   "block",	   "unblock",  "nice",		"font-size",
-
 								   "clear",    "ps",	   "loop",	   "cat",	   "wc",		"filter",
-								   "mvar",	"testmem", "testproc", "testprio", "testsync", "testnosync"};
+								   "mvar",	"testmem", "testproc", "testprio", "testsync"};
 
 int get_instruction_num(char *instruction) {
 	for (int i = 0; i < CANT_INSTRUCTIONS; i++) {
@@ -101,7 +113,7 @@ int instruction_parser(char *buffer, char *arguments) {
 
 	int instruction_num = 0;
 	if ((instruction_num = get_instruction_num(instruction)) == -1 && instruction[0] != 0) {
-		printErr("Comando no reconocido\n");
+		printErr("Error\n");
 	}
 	sys_mm_free(instruction);
 	return instruction_num;
@@ -166,8 +178,49 @@ static int split_args(char *args, char ***out_argv) {
 }
 
 static void handle_piped_commands(pipeCmd *pipe_cmd) {
-	printf("Todavia no hay pipes. Aguante boca\n");
-	return;
+
+	if (pipe_cmd->cmd1.instruction == -1 || pipe_cmd->cmd2.instruction == -1) {
+		printErr("Comando invalido.\n");
+		sys_mm_free(pipe_cmd->cmd1.arguments);
+		sys_mm_free(pipe_cmd->cmd2.arguments);
+		sys_mm_free(pipe_cmd);
+		return;
+	}
+	
+	if (IS_BUILT_IN(pipe_cmd->cmd1.instruction) || IS_BUILT_IN(pipe_cmd->cmd2.instruction)) {
+		printErr("No se pueden usar comandos built-in con pipes.\n");
+		sys_mm_free(pipe_cmd->cmd1.arguments);
+		sys_mm_free(pipe_cmd->cmd2.arguments);
+		sys_mm_free(pipe_cmd);
+		return;
+	}
+	
+	int pipe_fd = sys_pipe_create();
+	if (pipe_fd < 0) {
+		printErr("Error al crear el pipe\n");
+		sys_mm_free(pipe_cmd->cmd1.arguments);
+		sys_mm_free(pipe_cmd->cmd2.arguments);
+		sys_mm_free(pipe_cmd);
+		return;
+	}
+	
+	// Crear ambos procesos
+	// cmd1 lee de stdin (0) y escribe al pipe
+	// cmd2 lee del pipe y escribe a stdout (1)
+	pid_t pids[2];
+	pids[0] = instruction_handlers[pipe_cmd->cmd1.instruction - FONT_SIZE - 1](pipe_cmd->cmd1.arguments, STDIN, pipe_fd);
+	pids[1] = instruction_handlers[pipe_cmd->cmd2.instruction - FONT_SIZE - 1](pipe_cmd->cmd2.arguments, pipe_fd, STDOUT);
+	
+	// Esperar a que terminen ambos procesos
+	sys_waitProcess(pids[0]);
+	sys_mm_free(pipe_cmd->cmd1.arguments);
+	
+	sys_waitProcess(pids[1]);
+	sys_mm_free(pipe_cmd->cmd2.arguments);
+	
+	// Cerrar el pipe
+	sys_pipe_close(pipe_fd);
+	sys_mm_free(pipe_cmd);
 }
 
 void run_shell() {
@@ -225,7 +278,6 @@ void run_shell() {
                            instruction_list[pipe_cmd->cmd1.instruction]);
                 } else {
                     sys_waitProcess(pid);
-                    printf("Proceso %d terminado.\n", pid);
                 }
                 sys_mm_free(pipe_cmd->cmd1.arguments);
                 sys_mm_free(pipe_cmd);
