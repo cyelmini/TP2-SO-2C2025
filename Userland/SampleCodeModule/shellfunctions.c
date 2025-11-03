@@ -10,13 +10,13 @@
 
 typedef uint64_t (*fn)(uint64_t argc, char **argv);
 
-static uint64_t clear(int argc, char **argv);
-static uint64_t ps(int argc, char **argv);
+static uint64_t clear();
+static uint64_t ps();
 static uint64_t loop(int argc, char **argv);
-static uint64_t cat(int argc, char **argv);
-static uint64_t wc(int argc, char **argv);
+static uint64_t cat();
+static uint64_t wc();
 static int is_vowel(char c);
-static uint64_t filter(int argc, char **argv);
+static uint64_t filter();
 static uint64_t run_test_mm(int argc, char **argv);
 static uint64_t run_test_processes(int argc, char **argv);
 static uint64_t run_test_priority(int argc, char **argv);
