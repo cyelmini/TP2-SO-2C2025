@@ -182,9 +182,8 @@ int sys_waitProcess(int16_t pid);
  */
 void sys_exit();
 
-<<<<<<< Updated upstream
 void sys_sleep(uint32_t s);
-=======
+
 /**
  * @brief Crea e inicializa un semáforo con un valor inicial
  * @param id Identificador del semáforo (0 a 299)
@@ -251,6 +250,5 @@ int sys_pipe_write(int pipeId, const char *buffer, int count);
  * @return 0 si éxito, -1 si error
  */
 int sys_pipe_close(int pipeId);
->>>>>>> Stashed changes
 
 #endif

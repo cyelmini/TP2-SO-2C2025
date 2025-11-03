@@ -46,15 +46,16 @@
 #define YIELD 23
 #define WAIT_PS 24
 #define EXIT 25
-#define SEM_INIT 26
-#define SEM_OPEN 27
-#define SEM_WAIT 28
-#define SEM_POST 29
-#define SEM_CLOSE 30
-#define PIPE_CREATE 31
-#define PIPE_READ 32
-#define PIPE_WRITE 33
-#define PIPE_CLOSE 34
+#define SLEEP 26
+#define SEM_INIT 27
+#define SEM_OPEN 28
+#define SEM_WAIT 29
+#define SEM_POST 30
+#define SEM_CLOSE 31
+#define PIPE_CREATE 32
+#define PIPE_READ 33
+#define PIPE_WRITE 34
+#define PIPE_CLOSE 35
 
 static uint8_t syscall_read(uint32_t fd);
 
@@ -96,6 +97,8 @@ static uint64_t syscall_getPid();
 static ProcessInfo *syscall_process_info(uint16_t *processQty);
 
 static void syscall_exit();
+
+static void syscall_sleep(uint32_t s);
 
 static int64_t syscall_sem_init(int id, uint32_t value);
 
@@ -144,6 +147,7 @@ static const syscall syscalls[] = {
 	(syscall) yield,
 	(syscall) waitProcess,
 	(syscall) syscall_exit,
+	(syscall) syscall_sleep,
 	(syscall) syscall_sem_init,
 	(syscall) syscall_sem_open,
 	(syscall) syscall_sem_wait,
@@ -264,6 +268,16 @@ static ProcessInfo *syscall_process_info(uint16_t *processQty) {
 static void syscall_exit() {
 	killCurrentProcess();
 	yield();
+}
+
+static void syscall_sleep(uint32_t s){
+	if (s == 0) {
+		return;
+	}
+	uint32_t start = syscall_seconds();
+	while ((uint32_t) ((syscall_seconds() + 86400 - start) % 86400) < s) {
+		yield();
+	}
 }
 
 static int64_t syscall_sem_init(int id, uint32_t value) {

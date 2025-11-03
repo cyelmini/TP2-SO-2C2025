@@ -169,55 +169,52 @@ sys_exit:
     int 80h
     ret
 
-<<<<<<< Updated upstream
 sys_sleep:
     mov rax, 26
     int 80h
     ret
-=======
-sys_sem_create:
-    mov rax, 26
-    int 80h
-    ret
 
-sys_sem_open:
+sys_sem_create:
     mov rax, 27
     int 80h
     ret
 
-sys_sem_wait:
+sys_sem_open:
     mov rax, 28
     int 80h
     ret
 
-sys_sem_post:
+sys_sem_wait:
     mov rax, 29
     int 80h
     ret
 
-sys_sem_destroy:
+sys_sem_post:
     mov rax, 30
     int 80h
     ret
 
-sys_pipe_create:
+sys_sem_destroy:
     mov rax, 31
     int 80h
     ret
 
-sys_pipe_read:
+sys_pipe_create:
     mov rax, 32
     int 80h
     ret
 
-sys_pipe_write:
+sys_pipe_read:
     mov rax, 33
     int 80h
     ret
 
-sys_pipe_close:
+sys_pipe_write:
     mov rax, 34
     int 80h
     ret
 
->>>>>>> Stashed changes
+sys_pipe_close:
+    mov rax, 35
+    int 80h
+    ret
