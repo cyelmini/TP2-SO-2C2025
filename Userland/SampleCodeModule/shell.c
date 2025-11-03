@@ -96,7 +96,9 @@ int instruction_parser(char *buffer, char *arguments) {
 	for (i = 0; i < BUFFER; i++) {
 		if (buffer[i] == ' ' || buffer[i] == '\0' || buffer[i] == '\n') {
 			instruction[j] = '\0';
-			i++;
+			if (buffer[i] == ' ') {
+				i++;
+			}
 			break;
 		}
 		else {
