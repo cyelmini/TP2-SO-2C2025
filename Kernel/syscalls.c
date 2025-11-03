@@ -7,9 +7,11 @@
 #include "include/scheduler.h"
 #include "include/time.h"
 #include "include/video.h"
+#include "include/semaphore.h"
+#include "include/pipes.h"
 #include <stdint.h>
 
-#define SYSCALL_COUNT 26
+#define SYSCALL_COUNT 35
 
 // File Descriptors
 #define STDIN 0
@@ -44,6 +46,15 @@
 #define YIELD 23
 #define WAIT_PS 24
 #define EXIT 25
+#define SEM_INIT 26
+#define SEM_OPEN 27
+#define SEM_WAIT 28
+#define SEM_POST 29
+#define SEM_CLOSE 30
+#define PIPE_CREATE 31
+#define PIPE_READ 32
+#define PIPE_WRITE 33
+#define PIPE_CLOSE 34
 
 static uint8_t syscall_read(uint32_t fd);
 
@@ -86,7 +97,23 @@ static ProcessInfo *syscall_process_info(uint16_t *processQty);
 
 static void syscall_exit();
 
-static void syscall_sleep(uint32_t s);
+static int64_t syscall_sem_init(int id, uint32_t value);
+
+static int64_t syscall_sem_open(int id);
+
+static int64_t syscall_sem_wait(int id);
+
+static int64_t syscall_sem_post(int id);
+
+static int64_t syscall_sem_close(int id);
+
+static int64_t syscall_pipe_create();
+
+static int64_t syscall_pipe_read(int pipe_id, char *buffer, int size);
+
+static int64_t syscall_pipe_write(int pipe_id, const char *buffer, int size);
+
+static int64_t syscall_pipe_close(int pipe_id);
 
 typedef uint64_t (*syscall)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
 
@@ -117,7 +144,15 @@ static const syscall syscalls[] = {
 	(syscall) yield,
 	(syscall) waitProcess,
 	(syscall) syscall_exit,
-	(syscall) syscall_sleep,
+	(syscall) syscall_sem_init,
+	(syscall) syscall_sem_open,
+	(syscall) syscall_sem_wait,
+	(syscall) syscall_sem_post,
+	(syscall) syscall_sem_close,
+	(syscall) syscall_pipe_create,
+	(syscall) syscall_pipe_read,
+	(syscall) syscall_pipe_write,
+	(syscall) syscall_pipe_close,
 };
 
 uint64_t syscallDispatcher(uint64_t nr, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
@@ -231,11 +266,54 @@ static void syscall_exit() {
 	yield();
 }
 
-static void syscall_sleep(uint32_t s){
-	if (s == 0)
-		return;
-	uint32_t start = syscall_seconds();
-	while ((uint32_t) ((syscall_seconds() + 86400 - start) % 86400) < s) {
-		yield();
+static int64_t syscall_sem_init(int id, uint32_t value) {
+	if (id < 0 || id >= NUM_SEMS) {
+		return -1;
 	}
+	return sem_create(id, value);
 }
+
+static int64_t syscall_sem_open(int id) {
+	if (id < 0 || id >= NUM_SEMS) {
+		return -1;
+	}
+	return sem_open(id);
+}
+
+static int64_t syscall_sem_wait(int id) {
+	if (id < 0 || id >= NUM_SEMS) {
+		return -1;
+	}
+	return sem_wait(id);
+}
+
+static int64_t syscall_sem_post(int id) {
+	if (id < 0 || id >= NUM_SEMS) {
+		return -1;
+	}
+	return sem_post(id);
+}
+
+static int64_t syscall_sem_close(int id) {
+	if (id < 0 || id >= NUM_SEMS) {
+		return -1;
+	}
+	return sem_destroy(id);
+}
+
+static int64_t syscall_pipe_create() {
+	return createPipe();
+}
+
+static int64_t syscall_pipe_read(int pipe_id, char *buffer, int size) {
+	return readPipe(pipe_id, buffer, size);
+}
+
+static int64_t syscall_pipe_write(int pipe_id, const char *buffer, int size) {
+	return writePipe(pipe_id, buffer, size);
+}
+
+static int64_t syscall_pipe_close(int pipe_id) {
+	return closePipe(pipe_id);
+}
+

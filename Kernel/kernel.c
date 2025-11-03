@@ -4,6 +4,8 @@
 #include "include/moduleLoader.h"
 #include "include/scheduler.h"
 #include "include/video.h"
+#include "include/semaphore.h"
+#include "include/pipes.h"
 #include <stdint.h>
 
 extern uint8_t text;
@@ -44,10 +46,17 @@ int main() {
 
 	_cli();
 
-	// Memory manager y scheduler
+	// memory manager y scheduler
 	createScheduler();
 	
-	// Proceso shell
+	// inicializar semaforos y pipes
+	if (initSemaphoreManager() == NULL) {
+		print("Hubo un error al inicializar los semaforos.");
+		while(1) _hlt(); 
+	}
+	initializePipeManager();
+	
+	// proceso shell
 	char *argsShell[1] = {"shell"};
 	int16_t fileDescriptors[] = {STDIN, STDOUT, STDERR};
 	createProcess((uint64_t) sampleCodeModuleAddress, argsShell, 1, MAX_PRIORITY, fileDescriptors, 0);
