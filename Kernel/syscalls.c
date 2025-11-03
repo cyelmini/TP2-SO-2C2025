@@ -11,7 +11,7 @@
 #include "include/pipes.h"
 #include <stdint.h>
 
-#define SYSCALL_COUNT 35
+#define SYSCALL_COUNT 36
 
 // File Descriptors
 #define STDIN 0
