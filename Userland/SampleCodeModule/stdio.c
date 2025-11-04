@@ -34,9 +34,12 @@ void printErr(const char *s) {
 }
 
 int getchar() {
-	char c;
-	c = sys_read(STDIN);
-	return c;
+	unsigned char c = sys_read(STDIN);
+	// Si es 0xFF (255), es EOF (-1)
+	if (c == 0xFF) {
+		return -1;
+	}
+	return (int)c;
 }
 
 char getScanCode() {

@@ -16,6 +16,7 @@
         "defs.h": "c",
         "*.clang-format": "c",
         "syscalls.h": "c",
-        "shellfunctions.h": "c"
+        "shellfunctions.h": "c",
+        "keyboard.h": "c"
     }
 }

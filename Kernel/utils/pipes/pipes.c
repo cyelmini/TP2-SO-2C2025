@@ -3,7 +3,7 @@
 #include <stddef.h>
 
 static pipeManager pipes;
-static int next_sem_id = 0;
+static int next_sem_id = 100;
 
 static int validatePipeId(int *pipeId);
 
@@ -44,11 +44,8 @@ int createPipe() {
                 return -1;
             }
             
-            if(i == 0) {
-                return 0;
-            } else {
-                return i + 2;
-            }
+            // los primeros 3 son para STDIN, STDOUT y STDERR
+            return i + 3;
         }
     }
     return -1;
@@ -116,9 +113,6 @@ int writePipe(int pipe_id, const char *buffer, int size) {
 }
 
 int closePipe(int pipe_id) {
-    if(pipe_id == 1 || pipe_id == 2)
-        return -1;
-
     if(validatePipeId(&pipe_id) == -1)
         return -1;
 
@@ -161,29 +155,19 @@ int clearPipe(int pipe_id){
 static int validatePipeId(int *pipeId) {
     int id = *pipeId;
 
-    if (id < 0) {
+    if (id < 3) {
+        return -1;  
+    }
+
+    if (id > MAX_PIPES + 2) {
         return -1;
     }
 
-    if (id == 0) {
-        if (!pipes.pipes[0].isOpen) return -1;
-        *pipeId = 0;
-        return 0;
-    }
-
-    if (id == 1 || id == 2) {
+    int index = id - 3;
+    if (!pipes.pipes[index].isOpen) {
         return -1;
     }
 
-    if (id > (MAX_PIPES - 1) + 2) {
-        return -1;
-    }
-
-    id -= 2;
-    if (!pipes.pipes[id].isOpen) {
-        return -1;
-    }
-
-    *pipeId = id;
+    *pipeId = index;
     return 0;
 }

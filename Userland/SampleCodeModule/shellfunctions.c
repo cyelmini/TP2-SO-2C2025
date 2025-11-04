@@ -163,7 +163,7 @@ void bi_mem(int argc) {
 
 /* ------------------------ CLEAR ------------------------ */
 
-pid_t handle_clear(int stdin, int stdout) {
+pid_t handle_clear(char *arg, int stdin, int stdout) {
 	char *argv[] = {"clear"};
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
@@ -255,7 +255,7 @@ static uint64_t loop(int argc, char **argv) {
 
 /* ------------------------ CAT ------------------------ */
 
-pid_t handle_cat(int stdin, int stdout) {
+pid_t handle_cat(char *arg, int stdin, int stdout) {
 	char *argv[] = {"cat"};
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
@@ -276,7 +276,7 @@ static uint64_t cat() {
 
 /* ------------------------ WC ------------------------ */
 
-pid_t handle_wc(int stdin, int stdout) {
+pid_t handle_wc(char *arg, int stdin, int stdout) {
 	char *argv[] = {"wc"};
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
@@ -309,7 +309,7 @@ static int is_vowel(char c) {
 	        c == 'A' || c == 'E' || c == 'I' || c == 'O' || c == 'U');
 }
 
-pid_t handle_filter(int stdin, int stdout) {
+pid_t handle_filter(char *arg, int stdin, int stdout) {
 	char *argv[] = {"filter"};
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;

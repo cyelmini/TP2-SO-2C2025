@@ -61,12 +61,24 @@ int sem_destroy(int id) {
         return -1;
     }
     
-    semManager->semaphores[id].active = 0;
-    semManager->semaphores[id].counter = 0;
-    semManager->semaphores[id].spinlock = 0;
-    semManager->semaphores[id].waitQueue = NULL;
-
-    freeLinkedListADT(semManager->semaphores[id].waitQueue);
+    semaphore_t *sem = &semManager->semaphores[id];
+    
+    acquire(&sem->spinlock);
+    while (hasNext(sem->waitQueue)) {
+        int16_t *blockedPid = (int16_t *)nextInList(sem->waitQueue);
+        if (blockedPid != NULL) {
+            setReadyProcess(*blockedPid);
+            mm_free(blockedPid);
+        }
+    }
+    release(&sem->spinlock);
+    
+    freeLinkedListADT(sem->waitQueue);
+    
+    sem->active = 0;
+    sem->counter = 0;
+    sem->spinlock = 0;
+    sem->waitQueue = NULL;
     
     return 0;
 }

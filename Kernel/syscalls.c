@@ -167,7 +167,19 @@ uint64_t syscallDispatcher(uint64_t nr, uint64_t arg0, uint64_t arg1, uint64_t a
 }
 
 static uint8_t syscall_read(uint32_t fd) {
-	switch (fd) {
+	int16_t realFd = getFd(fd);
+	
+	// si es un pipe (FD >= 3), leer del pipe
+	if (realFd >= 3) {
+		char buffer;
+		int64_t bytesRead = readPipe(realFd, &buffer, 1);
+		if (bytesRead <= 0) {
+			return (uint8_t)(-1);  
+		}
+		return (uint8_t)buffer;
+	}
+	
+	switch (realFd) {
 		case STDIN:
 			return getAscii();
 		case KBDIN:
@@ -177,10 +189,23 @@ static uint8_t syscall_read(uint32_t fd) {
 }
 
 static void syscall_write(uint32_t fd, char c) {
+	int16_t realFd = getFd(fd);
+	
+	// si es un pipe (FD >= 3), escribir al pipe
+	if (realFd >= 3) {
+		writePipe(realFd, &c, 1);
+		return;
+	}
+	
+	// si es STDOUT o STDERR estandar, NO escribir EOF a pantalla
+	if ((char)c == (char)-1) {
+		return; 
+	} 
+	
 	Color prevColor = getFontColor();
-	if (fd == STDERR)
+	if (realFd == STDERR)
 		setFontColor(ERROR_COLOR);
-	else if (fd != STDOUT)
+	else if (realFd != STDOUT)
 		return;
 	printChar(c);
 	setFontColor(prevColor);
@@ -266,6 +291,8 @@ static ProcessInfo *syscall_process_info(uint16_t *processQty) {
 }
 
 static void syscall_exit() {
+	char eof = (char)-1;
+	syscall_write(STDOUT, eof);
 	killCurrentProcess();
 	yield();
 }
