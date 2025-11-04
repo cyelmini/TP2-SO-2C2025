@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define EOF (-1)
+
 typedef struct command {
 	int instruction;
 	char *arguments;

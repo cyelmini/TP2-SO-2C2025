@@ -3,6 +3,7 @@
 #include "../../include/time.h"
 #include "../../include/video.h"
 #include "../../include/scheduler.h"
+#include "../../include/semaphore.h"
 #include <stdint.h>
 
 #define BUFFER_CAPACITY 10 /* Longitud maxima del vector _buffer */
@@ -43,50 +44,41 @@ static int getBufferIndex(int offset) {
 	return (_bufferStart + offset) % (BUFFER_CAPACITY);
 }
 
+void initializeKeyboardDriver() {
+	sem_create(KEYBOARD_SEM_ID, 0);
+}
+
 void keyboardHandler() {
 	uint8_t key = getKeyPressed();
 	
-	// Detectar si se presionó o liberó una tecla
 	if (!(key & RELEASED)) {
-		// Tecla presionada
 		if (key == LCTRL) {
 			_ctrl = 1;
 		} else if (key == LSHIFT) {
 			_shift = 1;
 		} else if (_ctrl) {
-			// Combinaciones con Ctrl
 			if (key == C_KEY) {
-				// Ctrl+C: limpiar buffer y matar proceso foreground
 				_bufferStart = _bufferSize = 0;
 				killForegroundProcess();
 			} else if (key == D_KEY && _bufferSize < BUFFER_CAPACITY - 1) {
-				// Ctrl+D: enviar EOF para cerrar pipes
+				print("^D");
+				printNewline();
 				writeKey(EOF);
 			} else if (key == HOTKEY) {
-				// Ctrl+R: snapshot de registros
 				saveRegisters();
 			}
 		} else if (_bufferSize < BUFFER_CAPACITY - 1) {
-			// Tecla normal (puede tener shift)
 			if (_shift) {
 				key = SHIFTED | key;
 			}
 			writeKey(key);
 		}
 	} else {
-		// Tecla liberada
 		if (key == (LCTRL | RELEASED)) {
 			_ctrl = 0;
 		} else if (key == (LSHIFT | RELEASED)) {
 			_shift = 0;
 		}
-	}
-}
-
-static void writeKey(char key) {
-	if (((key & 0x7F) < sizeof(charHexMap) && charHexMap[key & 0x7F] != 0) || (int)key == EOF) {
-		_buffer[getBufferIndex(_bufferSize)] = key;
-		_bufferSize++;
 	}
 }
 
@@ -101,14 +93,26 @@ char getScancode() {
 }
 
 char getAscii() {
-	int scanCode = getScancode();
+	int scanCode;
+	
+	sem_wait(KEYBOARD_SEM_ID);
+	
+	scanCode = getScancode();
+	
 	if (scanCode == EOF) {
 		return EOF;
 	}
-	// Si tiene el flag SHIFTED, usar el mapa con shift
 	if (SHIFTED & scanCode) {
-		scanCode &= 0x7F; // Quitar el flag
+		scanCode &= 0x7F; 
 		return charHexMapShift[(int) scanCode];
 	}
 	return charHexMap[(int) scanCode];
+}
+
+static void writeKey(char key) {
+	if (((key & 0x7F) < sizeof(charHexMap) && charHexMap[key & 0x7F] != 0) || (int)key == EOF) {
+		_buffer[getBufferIndex(_bufferSize)] = key;
+		_bufferSize++;
+		sem_post(KEYBOARD_SEM_ID);
+	}
 }

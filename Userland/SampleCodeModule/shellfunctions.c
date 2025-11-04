@@ -36,33 +36,31 @@ void bi_help(int argc, char **argv) {
 		"Para conectar dos procesos mediante un pipe, utilice el simbolo '|'.\n\n"
 
 		"-------------BUILT-INS-------------\n"
-		"help                       Muestra el listado de comandos disponibles.\n"
-		"font-size                  Cambia el tamaño de la fuente. Uso: font-size <número>.\n"
-		"block                      Bloquea un proceso dado su ID.\n"
-		"unblock                    Desbloquea un proceso dado su ID.\n"
-		"kill                       Mata un proceso dado su ID.\n"
-		"nice                       Cambia la prioridad de un proceso dado su ID y la nueva prioridad.\n"
-		"mem                        Muestra el estado de la memoria: total, ocupada y libre.\n\n"
+		"help               Muestra el listado de comandos disponibles.\n"
+		"font-size          Cambia el tamaño de la fuente. Uso: font-size <número>.\n"
+		"block              Bloquea un proceso dado su ID.\n"
+		"unblock            Desbloquea un proceso dado su ID.\n"
+		"kill               Mata un proceso dado su ID.\n"
+		"nice               Cambia la prioridad de un proceso dado su ID y la nueva prioridad.\n"
+		"mem                Muestra el estado de la memoria: total, ocupada y libre.\n\n"
 
 		"-------------APLICACIONES DE USUARIO-------------\n"
-		"clear                      Limpia completamente la pantalla.\n"
-		"ps                         Lista todos los procesos en ejecucion con sus propiedades.\n"
-		"loop                       Imprime su ID con un saludo cada cierta cantidad de segundos.\n"
-		"cat                     	Imprime el contenido recibido por la entrada estándar (stdin).\n"
-		"wc                         Cuenta la cantidad de lineas recibidas por la entrada estandar.\n"
-		"filter                     Filtra las vocales del texto recibido por la entrada estandar.\n"
-		"mvar                       Simula multiples lectores y escritores sobre una variable compartida, garantizando "
-		"acceso exclusivo y sincronizacion.\n\n"
+		"clear              Limpia completamente la pantalla.\n"
+		"ps                 Lista todos los procesos en ejecucion con sus propiedades.\n"
+		"loop               Imprime su ID con un saludo cada cierta cantidad de segundos.\n"
+		"cat                Imprime el contenido recibido por la entrada estandar (stdin).\n"
+		"wc                 Cuenta la cantidad de lineas recibidas por la entrada estandar.\n"
+		"filter             Filtra las vocales del texto recibido por la entrada estandar.\n"
+		"mvar               Simula multiples lectores y escritores sobre una variable compartida.\n\n"
 
 		"-------------TESTS DEL SISTEMA-------------\n"
-		"testmem                    Prueba el administrador de memoria fisica.\n"
-		"testproc                   Crea, bloquea, desbloquea y mata procesos dummy aleatoriamente.\n"
-		"testprio                   Crea 3 procesos que incrementan una variable desde 0 hasta un valor dado, "
-		"mostrando las diferencias segun su prioridad.\n"
-		"testsync                   Prueba la sincronizacion usando semaforos. Uso: testsync <iteraciones> "
+		"testmem            Prueba el administrador de memoria fisica.\n"
+		"testproc           Crea, bloquea, desbloquea y mata procesos dummy aleatoriamente.\n"
+		"testprio           Crea 3 procesos que incrementan una variable desde 0 hasta un valor dado.\n"
+		"testsync           Prueba la sincronizacion usando semaforos. Uso: testsync <iteraciones> "
 		"<usar_sem>.\n"
-		"                           - <iteraciones>: numero de incrementos/decrementos por proceso\n"
-		"                           - <usar_sem>: 1 = con semaforos (resultado estable), 0 = sin semaforos (race condition)\n";
+		"                   - <iteraciones>: numero de incrementos/decrementos por proceso\n"
+		"                   - <usar_sem>: 1 = con semaforos (resultado estable), 0 = sin semaforos (race condition).\n";
 
 	printf("%s", manual);
 }
@@ -254,6 +252,7 @@ static uint64_t loop(int argc, char **argv) {
 	}
 	return 0;
 }
+
 /* ------------------------ CAT ------------------------ */
 
 pid_t handle_cat(int stdin, int stdout) {
@@ -265,15 +264,12 @@ pid_t handle_cat(int stdin, int stdout) {
 }
 
 static uint64_t cat() {
-	char c;
-	while (1) {
-		c = (char) sys_read(STDIN);
-		if (c == 0 || c == (char) 255) { // EOF o error
-			break;
+	int c;
+	while((c = getchar()) != EOF) {
+		if(c != 0){
+			putchar(c);
 		}
-		sys_write(STDOUT, c);
 	}
-	
 	sys_exit();
 	return 0;
 }
@@ -289,25 +285,25 @@ pid_t handle_wc(int stdin, int stdout) {
 }
 
 static uint64_t wc() {
-	int lineCount = 0;
-	char c;
-	
-	while (1) {
-		c = (char) sys_read(STDIN);
-		if (c == 0 || c == (char) 255) { // EOF o error
-			break;
+	int lines = 1;
+    int c;
+    
+   while((c = getchar()) != EOF) {
+		if (c != 0) {
+			if (c == '\n') {
+				lines++;
+			}
+			putchar(c);
 		}
-		if (c == '\n') {
-			lineCount++;
-		}
-	}
-	
-	printf("%d\n", lineCount);
+    }
+    printf("La cantidad de lineas es: %d\n", lines);
+
 	sys_exit();
 	return 0;
 }
 
 /* ------------------------ FILTER ------------------------ */
+
 static int is_vowel(char c) {
 	return (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u' ||
 	        c == 'A' || c == 'E' || c == 'I' || c == 'O' || c == 'U');
@@ -322,14 +318,11 @@ pid_t handle_filter(int stdin, int stdout) {
 }
 
 static uint64_t filter() {
-	char c;
-	while (1) {
-		c = (char) sys_read(STDIN);
-		if (c == 0 || c == (char) 255) { // EOF o error
-			break;
-		}
-		if (!is_vowel(c)) {
-			sys_write(STDOUT, c);
+	int c;
+
+	while((c = getchar()) != EOF){
+		if(!is_vowel(c)){
+			putchar(c);
 		}
 	}
 	
@@ -339,10 +332,8 @@ static uint64_t filter() {
 
 
 /* ------------------------ MVAR ------------------------ */
+
 pid_t handle_mvar(char *arg, int stdin, int stdout) {
-	(void) arg;
-	(void) stdin;
-	(void) stdout;
 	// TODO: Implementar más adelante
 	return -1;
 }
