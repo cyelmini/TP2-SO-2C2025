@@ -26,7 +26,6 @@ void createScheduler() {
 	scheduler->readyProcess = createDoubleLinkedListADT();
 	scheduler->blockedProcess = createDoubleLinkedListADT();
 	scheduler->currentPid = -1;
-	scheduler->nextPid = 0;
 	scheduler->currentProcess = NULL;
 	scheduler->processQty = 0;
 	scheduler->quantums = MIN_QUANTUMS;
@@ -107,7 +106,7 @@ int16_t createProcess(uint64_t rip, char **args, int argc, uint8_t priority, int
 		return -1;
 	}
 
-	if (scheduler->processQty > MAX_PROCESS) {
+	if (scheduler->processQty >= MAX_PROCESS) {
 		return -1;
 	}
 
@@ -118,9 +117,23 @@ int16_t createProcess(uint64_t rip, char **args, int argc, uint8_t priority, int
 
 	memset(newProcess, 0, sizeof(ProcessContext));
 
-	if (initializeProcess(newProcess, scheduler->nextPid, args, argc, priority, rip, ground, fileDescriptors) == -1) {
-		freeProcess(newProcess);
-		return -1;
+	//encontrar minimo pid libre
+	int16_t pid;
+	for (pid = 0; pid < MAX_PROCESS; pid++) {
+    	if (findProcess(pid) == NULL) {
+        	break;
+    	}
+	}
+	if (pid == MAX_PROCESS) {
+    	/* no free pid found */
+    	freeProcess(newProcess);
+    	return -1;
+	}
+
+	/* ahora inicializar con pid */
+	if (initializeProcess(newProcess, pid, args, argc, priority, rip, ground, fileDescriptors) == -1) {
+    	freeProcess(newProcess);
+    	return -1;
 	}
 
 	addNode(scheduler->processList, newProcess);
@@ -130,7 +143,6 @@ int16_t createProcess(uint64_t rip, char **args, int argc, uint8_t priority, int
 		addNode(scheduler->blockedProcess, newProcess);
 	}
 
-	scheduler->nextPid++;
 	scheduler->processQty++;
 	return newProcess->pid;
 }

@@ -23,7 +23,6 @@ typedef struct schedulerCDT {
 	doubleLinkedListADT blockedProcess;
 
 	int16_t currentPid;
-	int16_t nextPid;
 
 	ProcessContext *currentProcess;
 
