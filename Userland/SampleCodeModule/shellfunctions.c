@@ -8,11 +8,9 @@
 #include "include/shared.h"
 #include <stdint.h>
 
-typedef uint64_t (*fn)(uint64_t argc, char **argv, char ground);
-
 static uint64_t clear();
 static uint64_t ps();
-static uint64_t loop(int argc, char **argv, char ground);
+static uint64_t loop(int argc, char **argv);
 static uint64_t cat();
 static uint64_t wc();
 static uint64_t is_vowel(char c);
@@ -22,8 +20,10 @@ static uint64_t run_test_processes(int argc, char **argv);
 static uint64_t run_test_priority(int argc, char **argv);
 static uint64_t run_test_sync(int argc, char **argv);
 static int my_isdigit(char c);
+static uint32_t str_to_uint32(char *str) ;
 static int checkparamsloop(char *arg);
 static int checkparams(char *arg);
+static int checkparamstest(char *arg);
 static char findground(char *arg);
 
 
@@ -169,7 +169,6 @@ void bi_mem(int argc) {
 /* ------------------------ CLEAR ------------------------ */
 
 pid_t handle_clear(char *arg, int stdin, int stdout) {
-	char *argv[] = {"clear"};
 	char ground = 0;
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
@@ -181,6 +180,8 @@ pid_t handle_clear(char *arg, int stdin, int stdout) {
 			return -1;
 		}
 	}
+
+	char *argv[] = {"clear"};
 
 	pid_t pid = sys_createProcess((uint64_t) clear, argv, 1, priority, ground, fds);
 	return !ground ? pid : 0 ;
@@ -195,7 +196,6 @@ static uint64_t clear() {
 /* ------------------------ PS ------------------------ */
 
 pid_t handle_ps(char *arg, int stdin, int stdout) {
-	char *argv[] = {"ps"};
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
 	char ground = 0; 
@@ -208,53 +208,50 @@ pid_t handle_ps(char *arg, int stdin, int stdout) {
 		}
 	}
 
-	pid_t pid= sys_createProcess((uint64_t) ps, argv, 1, priority, ground, fds);
+	char *argv[] = {"ps"};
+
+	pid_t pid = sys_createProcess((uint64_t) ps, argv, 1, priority, ground, fds);
 	return !ground ? pid : 0;
 }
 
-static uint64_t ps(char ground) {
+static uint64_t ps() {
     uint16_t qty = 0;
     ProcessInfo *list = sys_processInfo(&qty);
     if (!list) {
         sys_exit();
         return 0;
     }
-	if (ground == 0){
-    	for (uint16_t i = 0; i < qty; i++) {
-       		printf("PID:%d  NAME:%s  STATUS:%d  PRIO:%d\n",
-               		(int) list[i].pid,
-               		list[i].name ? list[i].name : "(null)",
-               		(int) list[i].status,
-            		(int) list[i].priority);
+	
+    for (uint16_t i = 0; i < qty; i++) {
+   		printf("PID:%d  NAME:%s  STATUS:%d  PRIO:%d\n",
+           		(int) list[i].pid,
+           		list[i].name ? list[i].name : "(null)",
+           		(int) list[i].status,
+        		(int) list[i].priority);
 
-        	if (list[i].name) {
-            	sys_mm_free(list[i].name);
-        	}
-    	}
-	}
+        if (list[i].name) {
+            sys_mm_free(list[i].name);
+        }
+    }
+	
     sys_mm_free(list);
     sys_exit();
     return 0;
 }
 
-typedef uint64_t (*fnptr)(uint64_t argc, char **argv, char ground);
-
-
 /* ------------------------ LOOP ------------------------ */
 
 pid_t handle_loop(char *arg, int stdin, int stdout) {
 	int argc;
-	char *argv[2];
+	char *argv[3];
+	argv[0]="loop";
 
-	if (arg != NULL) {
-        argv [0]= "loop";
+	if (arg != NULL && *arg != '\0') {
+		argc = 2;
 		argv[1] = arg;
-        argc = 2;
-    } else {
-        argv [0]= "loop";
-		argv[1] = NULL;
-        argc = 1;
-    }
+	} else {
+		argc = 1;
+	}
 
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
@@ -268,28 +265,26 @@ pid_t handle_loop(char *arg, int stdin, int stdout) {
 		}
 	}
 
+
 	pid_t pid = sys_createProcess((uint64_t) loop, argv, argc, priority, ground, fds);
 	return !ground ? pid : 0;
 }
 
-static uint64_t loop(int argc, char **argv, char ground) {
+static uint64_t loop(int argc, char **argv) {
 	uint32_t interval = 1;
-	if (argc >= 1 && argv[0] && *argv[0]) {
-		int v = strtoi(argv[0], NULL);
-		if (v > 0)
-			interval = (uint32_t) v;
+	
+	if (argc > 1) {
+		uint32_t v = str_to_uint32(argv[1]);
+		if(v > 0){
+			interval = v;
+		}
 	}
 
 	uint64_t mypid = sys_getPid();
-	if(ground == 0){
-		while (1) {
-			printf("[loop] Hola! soy PID=%d\n", (int) mypid);
-			sys_sleep(interval);
-		}
-	}else{
-		while (1) {
-			sys_sleep(interval);
-		}
+	
+	while (1) {
+		printf("[loop] Hola! soy PID=%d\n", (int) mypid);
+		sys_sleep(interval);
 	}
 	return 0;
 }
@@ -301,6 +296,7 @@ pid_t handle_cat(char *arg, int stdin, int stdout) {
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
 	char ground = 0;
+
 	return (pid_t) sys_createProcess((uint64_t) cat, argv, 1, priority, ground, fds);
 }
 
@@ -417,17 +413,28 @@ static uint64_t run_test_mm(int argc, char **argv) {
 
 pid_t handle_test_processes(char *arg, int stdin, int stdout) {
     char *argv[] = { arg };
-    int argc = (arg && *arg) ? 1 : 0;
+    int argc;
 
-    if (argc != 1) {
-        printf("Uso: testproc <max_processes>\n");
-        return -1;
-    }
     int16_t fds[] = { stdin, stdout, STDERR };
     uint8_t priority = 1;
     char ground = 0; 
 
-    return (pid_t) sys_createProcess((uint64_t) run_test_processes, argv, argc, priority, ground, fds);
+	if(arg != NULL && *arg != '\0'){
+		ground = findground(arg);
+		if(checkparamstest(arg) == -1){
+			printf("Uso: testproc <max_processes> [&]\n");
+			return -1;
+		}
+	}
+
+	if(ground == 0){
+		argc = 1;
+	} else {
+		argc = 2;
+	}
+
+    pid_t pid = sys_createProcess((uint64_t) run_test_processes, argv, argc, priority, ground, fds);
+	return !ground ? pid : 0;
 }
 
 static uint64_t run_test_processes(int argc, char **argv) {
@@ -540,14 +547,9 @@ static uint64_t run_test_sync(int argc, char **argv) {
 
 /* ------------------------ Funciones auxiliares ------------------------ */
 
-static int my_isdigit(char c) {
-    return (c >= '0' && c <= '9');
-}
-
 static int checkparamsloop(char *arg) {
     int i = 0;
     int len = strlen(arg);
-    int foundNumber = 0;
     int foundAmp = 0;
 
     while (i < len && (arg[i] == ' ' || arg[i] == '\t'))
@@ -571,7 +573,6 @@ static int checkparamsloop(char *arg) {
             if (!my_isdigit(arg[j]))
                 return -1; 
         }
-        foundNumber = 1;
     }
     
     while (i < len && (arg[i] == ' ' || arg[i] == '\t'))
@@ -639,4 +640,71 @@ static char findground(char *arg){
 	}
 
 	return 0;
+}
+
+static int my_isdigit(char c) {
+    return (c >= '0' && c <= '9');
+}
+
+static uint32_t str_to_uint32(char *str) {
+    uint32_t result = 0;
+    int i = 0;
+    int hasDigit = 0;
+
+    while (str[i] == ' ' || str[i] == '\t')
+        i++;
+
+    while (my_isdigit(str[i])) {
+        hasDigit = 1;
+        result = result * 10 + (str[i] - '0');
+        i++;
+    }
+
+    while (str[i] == ' ' || str[i] == '\t')
+        i++;
+
+    if (!hasDigit || str[i] != '\0')
+        return -1;
+
+    return result;
+}
+
+static int checkparamstest(char *arg) {
+    int i = 0;
+    int hasDigit = 0;
+    int hasAmp = 0;
+
+    // 1. Saltar espacios iniciales
+    while (arg[i] == ' ' || arg[i] == '\t')
+        i++;
+
+    // 2. Debe haber al menos un dígito
+    while (my_isdigit(arg[i])) {
+        hasDigit = 1;
+        i++;
+    }
+
+    if (!hasDigit)
+        return -1;  // no hay número → inválido
+
+    // 3. Saltar espacios entre número y posible '&'
+    while (arg[i] == ' ' || arg[i] == '\t')
+        i++;
+
+    // 4. Si hay '&', permitir solo uno
+    if (arg[i] == '&') {
+        hasAmp = 1;
+        i++;
+    }
+
+    // 5. Saltar espacios finales
+    while (arg[i] == ' ' || arg[i] == '\t')
+        i++;
+
+    // 6. Debe terminar justo ahí
+    if (arg[i] != '\0')
+        return -1;  // hay caracteres de más → inválido
+
+    // 7. Si hay número (y opcionalmente &) → OK
+    return 0;
 }

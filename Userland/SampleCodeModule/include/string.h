@@ -37,4 +37,5 @@ int strlen(const char *str);
  * un puntero a su posicion o NULL si no se encuentra.
  */
 char *find_char(const char *s, char c);
+
 #endif

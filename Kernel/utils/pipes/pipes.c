@@ -79,6 +79,8 @@ int readPipe(int pipe_id, char *buffer, int size) {
         sem_post(pipe->semWriters); 
     }
     
+    // debug
+    //printf("readPipe: pipe_id=%d bytes_read=%d\n", pipe_id, bytes_read);
     return bytes_read;
 }
 
@@ -109,6 +111,8 @@ int writePipe(int pipe_id, const char *buffer, int size) {
         sem_post(pipe->semReaders); 
     }
     
+    // debug
+    //printf("writePipe: pipe_id=%d bytes_written=%d\n", pipe_id, bytes_written);
     return bytes_written;
 }
 
