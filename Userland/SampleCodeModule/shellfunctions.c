@@ -8,19 +8,24 @@
 #include "include/shared.h"
 #include <stdint.h>
 
-typedef uint64_t (*fn)(uint64_t argc, char **argv);
+typedef uint64_t (*fn)(uint64_t argc, char **argv, char ground);
 
 static uint64_t clear();
 static uint64_t ps();
-static uint64_t loop(int argc, char **argv);
+static uint64_t loop(int argc, char **argv, char ground);
 static uint64_t cat();
 static uint64_t wc();
-static int is_vowel(char c);
+static uint64_t is_vowel(char c);
 static uint64_t filter();
 static uint64_t run_test_mm(int argc, char **argv);
 static uint64_t run_test_processes(int argc, char **argv);
 static uint64_t run_test_priority(int argc, char **argv);
 static uint64_t run_test_sync(int argc, char **argv);
+static int my_isdigit(char c);
+static int checkparamsloop(char *arg);
+static int checkparams(char *arg);
+static char findground(char *arg);
+
 
 /* ------------------------ Funciones built-in de la shell ------------------------ */
 
@@ -165,10 +170,20 @@ void bi_mem(int argc) {
 
 pid_t handle_clear(char *arg, int stdin, int stdout) {
 	char *argv[] = {"clear"};
+	char ground = 0;
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
-	char ground = 0;
-	return (pid_t) sys_createProcess((uint64_t) clear, argv, 1, priority, ground, fds);
+
+	if(arg != NULL && *arg != '\0'){
+		ground = findground(arg);
+		if(checkparams(arg) == -1){
+			printf("Uso: clear [&]\n");
+			return -1;
+		}
+	}
+
+	pid_t pid = sys_createProcess((uint64_t) clear, argv, 1, priority, ground, fds);
+	return !ground ? pid : 0 ;
 }
 
 static uint64_t clear() {
@@ -184,34 +199,45 @@ pid_t handle_ps(char *arg, int stdin, int stdout) {
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
 	char ground = 0; 
-	return (pid_t) sys_createProcess((uint64_t) ps, argv, 1, priority, ground, fds);
+
+	if(arg != NULL && *arg != '\0'){
+		ground = findground(arg);
+		if(checkparams(arg) == -1){
+			printf("Uso: ps [&]\n");
+			return -1;
+		}
+	}
+
+	pid_t pid= sys_createProcess((uint64_t) ps, argv, 1, priority, ground, fds);
+	return !ground ? pid : 0;
 }
 
-static uint64_t ps() {
+static uint64_t ps(char ground) {
     uint16_t qty = 0;
     ProcessInfo *list = sys_processInfo(&qty);
     if (!list) {
         sys_exit();
         return 0;
     }
+	if (ground == 0){
+    	for (uint16_t i = 0; i < qty; i++) {
+       		printf("PID:%d  NAME:%s  STATUS:%d  PRIO:%d\n",
+               		(int) list[i].pid,
+               		list[i].name ? list[i].name : "(null)",
+               		(int) list[i].status,
+            		(int) list[i].priority);
 
-    for (uint16_t i = 0; i < qty; i++) {
-        printf("PID:%d  NAME:%s  STATUS:%d  PRIO:%d\n",
-               (int) list[i].pid,
-               list[i].name ? list[i].name : "(null)",
-               (int) list[i].status,
-               (int) list[i].priority);
-
-        if (list[i].name) {
-            sys_mm_free(list[i].name);
-        }
-    }
+        	if (list[i].name) {
+            	sys_mm_free(list[i].name);
+        	}
+    	}
+	}
     sys_mm_free(list);
     sys_exit();
     return 0;
 }
 
-typedef uint64_t (*fnptr)(uint64_t argc, char **argv);
+typedef uint64_t (*fnptr)(uint64_t argc, char **argv, char ground);
 
 
 /* ------------------------ LOOP ------------------------ */
@@ -234,10 +260,19 @@ pid_t handle_loop(char *arg, int stdin, int stdout) {
 	uint8_t priority = 1;
 	char ground = 0; 
 
-	return (pid_t) sys_createProcess((uint64_t) loop, argv, argc, priority, ground, fds);
+	if(arg != NULL && *arg != '\0'){
+		ground = findground(arg);
+		if(checkparamsloop(arg) == -1){
+			printf("Uso: loop [intervalo] [&]\n");
+			return -1;
+		}
+	}
+
+	pid_t pid = sys_createProcess((uint64_t) loop, argv, argc, priority, ground, fds);
+	return !ground ? pid : 0;
 }
 
-static uint64_t loop(int argc, char **argv) {
+static uint64_t loop(int argc, char **argv, char ground) {
 	uint32_t interval = 1;
 	if (argc >= 1 && argv[0] && *argv[0]) {
 		int v = strtoi(argv[0], NULL);
@@ -246,9 +281,15 @@ static uint64_t loop(int argc, char **argv) {
 	}
 
 	uint64_t mypid = sys_getPid();
-	while (1) {
-		printf("[loop] Hola! soy PID=%d\n", (int) mypid);
-		sys_sleep(interval);
+	if(ground == 0){
+		while (1) {
+			printf("[loop] Hola! soy PID=%d\n", (int) mypid);
+			sys_sleep(interval);
+		}
+	}else{
+		while (1) {
+			sys_sleep(interval);
+		}
 	}
 	return 0;
 }
@@ -304,7 +345,7 @@ static uint64_t wc() {
 
 /* ------------------------ FILTER ------------------------ */
 
-static int is_vowel(char c) {
+static uint64_t is_vowel(char c) {
 	return (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u' ||
 	        c == 'A' || c == 'E' || c == 'I' || c == 'O' || c == 'U');
 }
@@ -446,15 +487,13 @@ pid_t handle_test_sync(char *arg, int stdin, int stdout) {
 		return -1;
 	}
 	
-	// Separar los dos argumentos
 	char *token = arg;
 	char *space = NULL;
 	
-	// Buscar el primer espacio
 	for (char *p = arg; *p; p++) {
 		if (*p == ' ') {
 			space = p;
-			*p = '\0'; // Terminar el primer token
+			*p = '\0'; 
 			break;
 		}
 	}
@@ -496,5 +535,108 @@ static uint64_t run_test_sync(int argc, char **argv) {
 	}
 	
 	sys_exit();
+	return 0;
+}
+
+/* ------------------------ Funciones auxiliares ------------------------ */
+
+static int my_isdigit(char c) {
+    return (c >= '0' && c <= '9');
+}
+
+static int checkparamsloop(char *arg) {
+    int i = 0;
+    int len = strlen(arg);
+    int foundNumber = 0;
+    int foundAmp = 0;
+
+    while (i < len && (arg[i] == ' ' || arg[i] == '\t'))
+        i++;
+
+    //si no hay nada -> válido
+    if (i >= len)
+        return 0;
+
+    int start = i;
+    while (i < len && arg[i] != ' ' && arg[i] != '\t')
+        i++;
+    int end = i;
+    int firstLen = end - start;
+
+    //primer argumento
+    if (firstLen == 1 && arg[start] == '&') {
+        foundAmp = 1;
+    } else {
+        for (int j = start; j < end; j++) {
+            if (!my_isdigit(arg[j]))
+                return -1; 
+        }
+        foundNumber = 1;
+    }
+    
+    while (i < len && (arg[i] == ' ' || arg[i] == '\t'))
+        i++;
+    if (i >= len)
+        return 0;
+    if (foundAmp)
+        return -1;
+
+    //segundo argumento
+    start = i;
+    while (i < len && arg[i] != ' ' && arg[i] != '\t')
+        i++;
+    end = i;
+    int secondLen = end - start;
+
+    //el segundo argumento debe ser exactamente "&"
+    if (secondLen == 1 && arg[start] == '&') {
+        foundAmp = 1;
+    } else {
+        return -1; // cualquier otra cosa no válida
+    }
+
+    while (i < len && (arg[i] == ' ' || arg[i] == '\t'))
+        i++;
+
+    //si hay algo más después -> inválido
+    if (i < len)
+        return -1;
+
+    return 0;
+}
+
+static int checkparams(char *arg){
+	int i = 0;
+    int len = strlen(arg);
+    while (i < len && (arg[i] == ' ' || arg[i] == '\t'))
+        i++;
+
+    if (i >= len)
+        return 0; 
+
+    
+    if (arg[i] == '&') {
+        i++;
+        while (i < len && (arg[i] == ' ' || arg[i] == '\t'))
+            i++;
+        if (i >= len)
+            return 0;
+        else
+            return -1; // había más cosas después de &
+    }
+
+    return -1;
+}
+
+static char findground(char *arg){
+	if (arg == NULL || *arg == '\0') {
+		return 0;
+	}
+
+	int len = strlen(arg);
+	if(arg[len-1] == '&'){
+		return 1;
+	}
+
 	return 0;
 }

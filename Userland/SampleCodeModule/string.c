@@ -1,4 +1,5 @@
 #include "include/string.h"
+#include "include/syscalls.h"
 #include <stddef.h>
 
 int strcmp(const char *s1, const char *s2) {
@@ -21,6 +22,16 @@ int strcpychar(char *dest, const char *origin, char limit) {
 	}
 	dest[idx] = 0;
 	return idx;
+}
+
+int strlen(const char *s) {
+    size_t len = 0;
+    if (!s)
+        return 0;
+    while (s[len] != '\0') {
+        len++;
+    }
+    return len;
 }
 
 char *find_char(const char *s, char c) {

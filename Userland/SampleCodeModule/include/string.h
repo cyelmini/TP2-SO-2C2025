@@ -25,6 +25,13 @@ int strcpychar(char *dest, const char *origin, char limit);
  */
 int strcpy(char *dest, const char *origin);
 
+/**
+ * @brief Calcula la longitud de una cadena de caracteres
+ * @param str: Cadena de caracteres
+ * @return Longitud de la cadena (sin incluir el caracter nulo '\0')
+ */
+int strlen(const char *str);
+
 /*
  * Busca el primer caracter 'c' en la cadena 's' y devuelve
  * un puntero a su posicion o NULL si no se encuentra.
