@@ -19,6 +19,8 @@ static uint64_t run_test_mm(int argc, char **argv);
 static uint64_t run_test_processes(int argc, char **argv);
 static uint64_t run_test_priority(int argc, char **argv);
 static uint64_t run_test_sync(int argc, char **argv);
+static uint64_t mvar_writer(int argc, char **argv);
+static uint64_t mvar_reader(int argc, char **argv);
 static int my_isdigit(char c);
 static uint32_t str_to_uint32(char *str) ;
 static int checkparamsloop(char *arg);
@@ -371,8 +373,65 @@ static uint64_t filter() {
 /* ------------------------ MVAR ------------------------ */
 
 pid_t handle_mvar(char *arg, int stdin, int stdout) {
-	// TODO: Implementar más adelante
-	return -1;
+	if (!arg || !(*arg)) {
+		printf("Uso: mvar <writers> <readers>\n");
+		return -1;
+	}
+
+	// parse args: two integers
+	char *entrada = arg;
+	char *separador = NULL;
+	for (char *p = arg; *p; p++) {
+		if (*p == ' ') {
+			separador = p;
+			*p = '\0';
+			break;
+		}
+	}
+	if (!separador) {
+		printf("Uso: mvar <writers> <readers>\n");
+		return -1;
+	}
+	char *escritores_str = entrada;
+	char *lectores_str = separador + 1;
+
+	int cantidad_escritores = (int) str_to_uint32(escritores_str);
+	int cantidad_lectores = (int) str_to_uint32(lectores_str);
+	if (cantidad_escritores <= 0 || cantidad_lectores <= 0) {
+		printf("Uso: mvar <writers> <readers> (valores > 0)\n");
+		return -1;
+	}
+
+	int pipe_datos = sys_pipe_create();
+	if (pipe_datos < 0) {
+		printf("Error creando pipe_datos\n");
+		return -1;
+	}
+
+	for (int idx_escritor = 0; idx_escritor < cantidad_escritores; idx_escritor++) {
+		char *arg_letra = (char *) sys_mm_alloc(2);
+		if (!arg_letra) continue;
+		arg_letra[0] = 'A' + (idx_escritor % 26);
+		arg_letra[1] = '\0';
+		char *wargv[] = { arg_letra };
+		int16_t fds_escritor[] = { STDIN, (int16_t) pipe_datos, STDERR };
+		sys_createProcess((uint64_t) mvar_writer, wargv, 1, 1, 1, fds_escritor);
+		sys_mm_free(arg_letra);
+	}
+
+	for (int idx_lector = 0; idx_lector < cantidad_lectores; idx_lector++) {
+		char *arg_id = (char *) sys_mm_alloc(4);
+		if (!arg_id) continue;
+		// pass an id as string
+		arg_id[0] = '0' + (idx_lector % 10);
+		arg_id[1] = '\0';
+		char *rargv[] = { arg_id };
+		int16_t fds_lector[] = { (int16_t) pipe_datos, STDOUT, STDERR };
+		sys_createProcess((uint64_t) mvar_reader, rargv, 1, 1, 1, fds_lector);
+		sys_mm_free(arg_id);
+	}
+
+	return 0;
 }
 
 /* ------------------------ TEST_MM ------------------------ */
@@ -427,11 +486,7 @@ pid_t handle_test_processes(char *arg, int stdin, int stdout) {
 		}
 	}
 
-	if(ground == 0){
-		argc = 1;
-	} else {
-		argc = 2;
-	}
+	argc = 1;
 
     pid_t pid = sys_createProcess((uint64_t) run_test_processes, argv, argc, priority, ground, fds);
 	return !ground ? pid : 0;
@@ -636,6 +691,7 @@ static char findground(char *arg){
 
 	int len = strlen(arg);
 	if(arg[len-1] == '&'){
+		arg[len-1] = '\0';
 		return 1;
 	}
 
@@ -674,37 +730,71 @@ static int checkparamstest(char *arg) {
     int hasDigit = 0;
     int hasAmp = 0;
 
-    // 1. Saltar espacios iniciales
     while (arg[i] == ' ' || arg[i] == '\t')
         i++;
 
-    // 2. Debe haber al menos un dígito
     while (my_isdigit(arg[i])) {
         hasDigit = 1;
         i++;
     }
 
     if (!hasDigit)
-        return -1;  // no hay número → inválido
+        return -1;
 
-    // 3. Saltar espacios entre número y posible '&'
     while (arg[i] == ' ' || arg[i] == '\t')
         i++;
 
-    // 4. Si hay '&', permitir solo uno
     if (arg[i] == '&') {
         hasAmp = 1;
         i++;
     }
 
-    // 5. Saltar espacios finales
     while (arg[i] == ' ' || arg[i] == '\t')
         i++;
 
-    // 6. Debe terminar justo ahí
     if (arg[i] != '\0')
-        return -1;  // hay caracteres de más → inválido
+        return -1; 
 
-    // 7. Si hay número (y opcionalmente &) → OK
     return 0;
+}
+
+/* ------------------------ MVAR helpers (writers/readers) ------------------------ */
+
+static uint64_t mvar_writer(int argc, char **argv) {
+	char letra = 'A';
+	if (argc > 0 && argv[0] && argv[0][0])
+		letra = argv[0][0];
+	while (1) {
+		putchar((char) letra);
+		sys_sleep(1);
+	}
+	return 0;
+}
+
+static uint64_t mvar_reader(int argc, char **argv) {
+	int id_lector = 0;
+	if (argc > 0 && argv[0] && argv[0][0])
+		id_lector = argv[0][0] - '0';
+
+	uint8_t colores_rgb[][3] = {
+		{100, 255, 100}, // verde
+		{184, 153, 255}, // rosa
+		{184,   0, 255}, // magenta
+		{170, 169, 173}, // plata
+		{255,   0,   0}  // rojo
+	};
+	int colorIdx = id_lector % (sizeof(colores_rgb) / sizeof(colores_rgb[0]));
+
+	while (1) {
+		int caracter = getchar();
+		if (caracter == EOF) {
+			sys_exit();
+			return 0;
+		}
+
+		sys_setFontColor(colores_rgb[colorIdx][0], colores_rgb[colorIdx][1], colores_rgb[colorIdx][2]);
+		putchar((char) caracter);
+		sys_setFontColor(255, 255, 255);
+	}
+	return 0;
 }

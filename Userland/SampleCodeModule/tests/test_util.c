@@ -41,7 +41,7 @@ int64_t satoi(char *str) {
 		sign = -1;
 	}
 
-	for (; str[i] != '\0'; ++i) {
+	for (; str[i] != '\0' && str[i] != ' '; ++i) {
 		if (str[i] < '0' || str[i] > '9')
 			return 0;
 		res = res * 10 + str[i] - '0';
