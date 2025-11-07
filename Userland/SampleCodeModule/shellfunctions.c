@@ -692,6 +692,7 @@ static char findground(char *arg){
 	int len = strlen(arg);
 	if(arg[len-1] == '&'){
 		arg[len-1] = '\0';
+		arg[len-2] = '\0';
 		return 1;
 	}
 
