@@ -51,5 +51,5 @@ int str_in_list(const char *needle, char *list[], int list_len) {
 		if (list[i] && strcmp(needle, list[i]) == 0)
 			return i;
 	}
-	return 0;
+	return -1;
 }

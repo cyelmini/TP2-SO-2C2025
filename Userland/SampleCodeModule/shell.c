@@ -154,7 +154,7 @@ static void handle_piped_commands(pipeCmd *pipe_cmd) {
 static void separate_cmds(char ** argv, char ** cmd1, char ** cmd2){
 	if (!argv || !cmd1 || !cmd2) return;
 
-	int sep = str_in_list('|', argv, MAX_ARGS);
+	int sep = str_in_list("|", argv, MAX_ARGS);
 
 	/* copy before separator into cmd1 */
 	int c = 0;
@@ -247,8 +247,8 @@ void run_shell() {
 		int argc = split_args(line, argv);
 		if (argc == 0) { continue; }
 
-		/* If there is a pipe, build a pipeCmd and dispatch */
-		if (str_in_list('|', argv, MAX_ARGS)) {
+	/* If there is a pipe, build a pipeCmd and dispatch */
+	if (str_in_list("|", argv, MAX_ARGS) != -1) {
 			pipeCmd *pipecmds = (pipeCmd *) sys_mm_alloc(sizeof(pipeCmd));
 			if (!pipecmds) {
 				printErr("Error al asignar memoria para pipeCmd\n");

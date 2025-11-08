@@ -175,7 +175,7 @@ pid_t handle_clear(char **argv, int argc, int ground, int stdin, int stdout) {
 	uint8_t priority = 1;
 
 	/* create process using provided argv/argc */
-	pid_t pid = sys_createProcess((uint64_t) clear, argv, argc > 0 ? argc : 1, priority, (char)ground, fds);
+	pid_t pid = sys_createProcess((uint64_t) clear, argv, argc > 0 ? argc : 1, priority, (char)(!ground), fds);
 	return ground ? pid : 0 ;
 }
 
@@ -191,7 +191,7 @@ pid_t handle_ps(char **argv, int argc, int ground, int stdin, int stdout) {
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
 
-	pid_t pid = sys_createProcess((uint64_t) ps, argv, argc > 0 ? argc : 1, priority, (char)ground, fds);
+	pid_t pid = sys_createProcess((uint64_t) ps, argv, argc > 0 ? argc : 1, priority, (char)(!ground), fds);
 	return ground ? pid : 0;
 }
 
@@ -226,7 +226,7 @@ pid_t handle_loop(char **argv, int argc, int ground, int stdin, int stdout) {
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
 
-	pid_t pid = sys_createProcess((uint64_t) loop, argv, argc > 0 ? argc : 1, priority, (char)ground, fds);
+	pid_t pid = sys_createProcess((uint64_t) loop, argv, argc > 0 ? argc : 1, priority, (char)(!ground), fds);
 	return ground ? pid : 0;
 }
 
@@ -255,7 +255,7 @@ pid_t handle_cat(char **argv, int argc, int ground, int stdin, int stdout) {
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
 
-	pid_t pid = (pid_t) sys_createProcess((uint64_t) cat, argv, argc > 0 ? argc : 1, priority, (char)ground, fds);
+	pid_t pid = (pid_t) sys_createProcess((uint64_t) cat, argv, argc > 0 ? argc : 1, priority, (char)(!ground), fds);
 	return ground ? pid : 0;
 }
 
@@ -275,7 +275,7 @@ static uint64_t cat() {
 pid_t handle_wc(char **argv, int argc, int ground, int stdin, int stdout) {
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
-	pid_t pid = (pid_t) sys_createProcess((uint64_t) wc, argv, argc > 0 ? argc : 1, priority, (char)ground, fds);
+	pid_t pid = (pid_t) sys_createProcess((uint64_t) wc, argv, argc > 0 ? argc : 1, priority, (char)(!ground), fds);
 	return ground ? pid : 0;
 }
 
@@ -307,7 +307,7 @@ static uint64_t is_vowel(char c) {
 pid_t handle_filter(char **argv, int argc, int ground, int stdin, int stdout) {
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
-	pid_t pid = (pid_t) sys_createProcess((uint64_t) filter, argv, argc > 0 ? argc : 1, priority, (char)ground, fds);
+	pid_t pid = (pid_t) sys_createProcess((uint64_t) filter, argv, argc > 0 ? argc : 1, priority, (char)(!ground), fds);
 	return ground ? pid : 0;
 }
 
@@ -384,7 +384,7 @@ pid_t handle_test_mm(char **argv, int argc, int ground, int stdin, int stdout) {
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
 
-	pid_t pid = (pid_t) sys_createProcess((uint64_t) run_test_mm, argv, argc, priority, (char)ground, fds);
+	pid_t pid = (pid_t) sys_createProcess((uint64_t) run_test_mm, argv, argc, priority, (char)(!ground), fds);
 	return ground ? pid : 0;
 }
 
@@ -411,7 +411,7 @@ pid_t handle_test_processes(char **argv, int argc, int ground, int stdin, int st
 	int16_t fds[] = { stdin, stdout, STDERR };
 	uint8_t priority = 1;
 
-	pid_t pid = sys_createProcess((uint64_t) run_test_processes, argv, argc > 0 ? argc : 1, priority, (char)ground, fds);
+	pid_t pid = sys_createProcess((uint64_t) run_test_processes, argv, argc > 0 ? argc : 1, priority, (char)(!ground), fds);
 	return ground ? pid : 0;
 }
 
@@ -439,7 +439,7 @@ pid_t handle_test_priority(char **argv, int argc, int ground, int stdin, int std
 	int16_t fds[] = { stdin, stdout, STDERR };
 	uint8_t priority = 1;
 
-	pid_t pid = (pid_t) sys_createProcess((uint64_t) run_test_priority, argv, argc, priority, (char)ground, fds);
+	pid_t pid = (pid_t) sys_createProcess((uint64_t) run_test_priority, argv, argc, priority, (char)(!ground), fds);
 	return ground ? pid : 0;
 }
 
@@ -467,7 +467,7 @@ pid_t handle_test_sync(char **argv, int argc, int ground, int stdin, int stdout)
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
 
-	pid_t pid = (pid_t) sys_createProcess((uint64_t) run_test_sync, argv, argc, priority, (char)ground, fds);
+	pid_t pid = (pid_t) sys_createProcess((uint64_t) run_test_sync, argv, argc, priority, (char)(!ground), fds);
 	return ground ? pid : 0;
 }
 
