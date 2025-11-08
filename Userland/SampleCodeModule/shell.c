@@ -269,7 +269,7 @@ void run_shell() {
 		/* Non-piped command: parse instruction and dispatch */
 		int instruction_n = str_in_list(argv[0], instruction_list, CANT_INSTRUCTIONS);
 		if (instruction_n == -1) {
-			printf("Comando %s Invalido\n", argv[0]);
+			printErr("Comando invalido, ejecuta 'help' para conocer los comandos\n");
 			continue;
 		}
 

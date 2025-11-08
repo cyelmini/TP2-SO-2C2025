@@ -23,10 +23,6 @@ static uint64_t mvar_writer(int argc, char **argv);
 static uint64_t mvar_reader(int argc, char **argv);
 static int my_isdigit(char c);
 static uint32_t str_to_uint32(char *str) ;
-static int checkparamsloop(char *arg);
-static int checkparams(char *arg);
-static int checkparamstest(char *arg);
-static char findground(char *arg);
 
 
 /* ------------------------ Funciones built-in de la shell ------------------------ */
@@ -494,103 +490,7 @@ static uint64_t run_test_sync(int argc, char **argv) {
 }
 
 /* ------------------------ Funciones auxiliares ------------------------ */
-
-static int checkparamsloop(char *arg) {
-    int i = 0;
-    int len = strlen(arg);
-    int foundAmp = 0;
-
-    while (i < len && (arg[i] == ' ' || arg[i] == '\t'))
-        i++;
-
-    //si no hay nada -> válido
-    if (i >= len)
-        return 0;
-
-    int start = i;
-    while (i < len && arg[i] != ' ' && arg[i] != '\t')
-        i++;
-    int end = i;
-    int firstLen = end - start;
-
-    //primer argumento
-    if (firstLen == 1 && arg[start] == '&') {
-        foundAmp = 1;
-    } else {
-        for (int j = start; j < end; j++) {
-            if (!my_isdigit(arg[j]))
-                return -1; 
-        }
-    }
-    
-    while (i < len && (arg[i] == ' ' || arg[i] == '\t'))
-        i++;
-    if (i >= len)
-        return 0;
-    if (foundAmp)
-        return -1;
-
-    //segundo argumento
-    start = i;
-    while (i < len && arg[i] != ' ' && arg[i] != '\t')
-        i++;
-    end = i;
-    int secondLen = end - start;
-
-    //el segundo argumento debe ser exactamente "&"
-    if (secondLen == 1 && arg[start] == '&') {
-        foundAmp = 1;
-    } else {
-        return -1; // cualquier otra cosa no válida
-    }
-
-    while (i < len && (arg[i] == ' ' || arg[i] == '\t'))
-        i++;
-
-    //si hay algo más después -> inválido
-    if (i < len)
-        return -1;
-
-    return 0;
-}
-
-static int checkparams(char *arg){
-	int i = 0;
-    int len = strlen(arg);
-    while (i < len && (arg[i] == ' ' || arg[i] == '\t'))
-        i++;
-
-    if (i >= len)
-        return 0; 
-
-    
-    if (arg[i] == '&') {
-        i++;
-        while (i < len && (arg[i] == ' ' || arg[i] == '\t'))
-            i++;
-        if (i >= len)
-            return 0;
-        else
-            return -1; // había más cosas después de &
-    }
-
-    return -1;
-}
-
-static char findground(char *arg){
-	if (arg == NULL || *arg == '\0') {
-		return 0;
-	}
-
-	int len = strlen(arg);
-	if(arg[len-1] == '&'){
-		arg[len-1] = '\0';
-		arg[len-2] = '\0';
-		return 1;
-	}
-
-	return 0;
-}
+ 
 
 static int my_isdigit(char c) {
     return (c >= '0' && c <= '9');
@@ -619,38 +519,7 @@ static uint32_t str_to_uint32(char *str) {
     return result;
 }
 
-static int checkparamstest(char *arg) {
-    int i = 0;
-    int hasDigit = 0;
-    int hasAmp = 0;
-
-    while (arg[i] == ' ' || arg[i] == '\t')
-        i++;
-
-    while (my_isdigit(arg[i])) {
-        hasDigit = 1;
-        i++;
-    }
-
-    if (!hasDigit)
-        return -1;
-
-    while (arg[i] == ' ' || arg[i] == '\t')
-        i++;
-
-    if (arg[i] == '&') {
-        hasAmp = 1;
-        i++;
-    }
-
-    while (arg[i] == ' ' || arg[i] == '\t')
-        i++;
-
-    if (arg[i] != '\0')
-        return -1; 
-
-    return 0;
-}
+ 
 
 /* ------------------------ MVAR helpers (writers/readers) ------------------------ */
 
