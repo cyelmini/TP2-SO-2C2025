@@ -17,6 +17,7 @@
         "*.clang-format": "c",
         "syscalls.h": "c",
         "shellfunctions.h": "c",
-        "keyboard.h": "c"
+        "keyboard.h": "c",
+        "shared.h": "c"
     }
 }

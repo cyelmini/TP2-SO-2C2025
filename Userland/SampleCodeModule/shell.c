@@ -1,7 +1,9 @@
 #include "include/shell.h"
 #include "include/libasm.h"
 #include "include/man.h"
-#include "include/shellfunctions.h"
+#include "include/builtinFunctions.h"
+#include "include/processFunctions.h"
+#include "include/mvar.h"
 #include "include/stdio.h"
 #include "include/stdlib.h"
 #include "include/string.h"
@@ -18,7 +20,12 @@
 #define CANT_PROCESS (CANT_INSTRUCTIONS - CANT_BUILTIN -1)
 #define MAX_ARGS 16
 
+static int split_args(char *args, char **out_argv);
+static void separate_cmds(char ** argv, char ** cmd1, char ** cmd2);
+static int check_fore(char ** argv, int * argc);
+static void remove_name(char **argv, int *argc);
 static void handle_piped_commands(pipeCmd *pipe_cmd);
+static void handle_process_command(char ** argv, int argc, int inst_n);
 
 typedef enum {
 	// built-in
@@ -44,7 +51,7 @@ typedef enum {
 	TESTSYNC
 } instructions;
 
-typedef pid_t (*process_cmd)(char *, int, int);
+typedef pid_t (*process_cmd)(char **, int, int, int, int);
 
 static const process_cmd instruction_handlers[CANT_PROCESS] = {
 	(process_cmd) handle_clear,
@@ -76,90 +83,11 @@ static char *instruction_list[] = {"help",	"mem",	   "kill",	   "block",	   "unb
 								   "clear",    "ps",	   "loop",	   "cat",	   "wc",		"filter",
 								   "mvar",	"testmem", "testproc", "testprio", "testsync"};
 
-int get_instruction_num(char *instruction) {
-	for (int i = 0; i < CANT_INSTRUCTIONS; i++) {
-		if (strcmp(instruction, instruction_list[i]) == 0) {
-			return i;
-		}
-	}
-	return -1;
-}
-
-int instruction_parser(char *buffer, char *arguments) {
-	char *instruction = sys_mm_alloc(BUFFER * sizeof(char));
-	if (instruction == NULL) {
-		printErr("Error al asignar memoria para la instruccion.\n");
-		return -1;
-	}
-
-	int i, j = 0;
-	for (i = 0; i < BUFFER; i++) {
-		if (buffer[i] == ' ' || buffer[i] == '\0' || buffer[i] == '\n') {
-			instruction[j] = '\0';
-			if (buffer[i] == ' ') {
-				i++;
-			}
-			break;
-		}
-		else {
-			instruction[j] = buffer[i];
-			j++;
-		}
-	}
-
-	int k = 0;
-	while (buffer[i] != '\0' && buffer[i] != '\n') {
-		arguments[k++] = buffer[i++];
-	}
-	arguments[k] = '\0';
-
-	int instruction_num = 0;
-	if ((instruction_num = get_instruction_num(instruction)) == -1 && instruction[0] != 0) {
-		printErr("Error\n");
-	}
-	sys_mm_free(instruction);
-	return instruction_num;
-}
-
-int bufferCountInstructions(pipeCmd *pipe_cmd, char *line) {
-	int instructions = 0;
-	char *pipe_pos = find_char(line, '|');
-	if (pipe_pos != NULL) { // devuelve null si no hay pipe
-		*(pipe_pos - 1) = 0;
-		*pipe_pos = 0;
-		*(pipe_pos + 1) = 0;
-		char *arg2 = sys_mm_alloc(BUFFER * sizeof(char));
-		pipe_cmd->cmd2.instruction = instruction_parser(pipe_pos + 2, arg2);
-		pipe_cmd->cmd2.arguments = arg2;
-		if (pipe_cmd->cmd2.instruction >= 0)
-			instructions++;
-	}
-
-	char *arg1 = sys_mm_alloc(BUFFER * sizeof(char));
-	pipe_cmd->cmd1.instruction = instruction_parser(line, arg1);
-	pipe_cmd->cmd1.arguments = arg1;
-	if (pipe_cmd->cmd1.instruction >= 0)
-		instructions++;
-
-	if (instructions>1 && IS_BUILT_IN(pipe_cmd->cmd1.instruction) && IS_BUILT_IN(pipe_cmd->cmd2.instruction)) {
-		printErr("No se pueden usar comandos built-in con pipes.\n");
-		sys_mm_free(pipe_cmd->cmd1.arguments);
-		sys_mm_free(pipe_cmd->cmd2.arguments);
-		sys_mm_free(pipe_cmd);
-		return -1;
-	}
-	if (IS_BUILT_IN(pipe_cmd->cmd1.instruction)) {
-		return 0;
-	}
-
-	return instructions;
-}
-
-static int split_args(char *args, char ***out_argv) {
+static int split_args(char *args, char **out_argv) {
 	int argc = 0;
-	char **argv = (char **) sys_mm_alloc(sizeof(char *) * MAX_ARGS);
-	if (!argv)
-		return -1;
+	char **argv = out_argv;
+
+	if (!argv || !args) return -1;
 
 	while (*args == ' ')
 		args++;
@@ -175,8 +103,58 @@ static int split_args(char *args, char ***out_argv) {
 				args++;
 		}
 	}
-	*out_argv = argv;
+	/* Null-terminate remaining entries if any */
+	for (int i = argc; i < MAX_ARGS; i++)
+		argv[i] = NULL;
 	return argc;
+}
+
+static void separate_cmds(char ** argv, char ** cmd1, char ** cmd2){
+	if (!argv || !cmd1 || !cmd2) return;
+
+	int sep = str_in_list("|", argv, MAX_ARGS);
+
+	/* copy before separator into cmd1 */
+	int c = 0;
+	for (int j = 0; j < sep && j < MAX_ARGS; j++) {
+		cmd1[c++] = argv[j];
+	}
+	cmd1[c] = NULL;
+
+	/* copy after separator into cmd2 */
+	c = 0;
+	for (int j = sep + 1; j < MAX_ARGS && argv[j]; j++) {
+		cmd2[c++] = argv[j];
+	}
+	cmd2[c] = NULL;
+}
+
+static int check_fore(char ** argv, int * argc){
+	if (!argv || !argc || *argc <= 0) return 1; // default foreground
+	int res = argv[*argc - 1] && argv[*argc - 1][0] == '&';
+	if(res){
+		argv[*argc - 1] = NULL;
+		*argc -= 1;
+	}
+	return !res; // return 1 for foreground, 0 for background
+}
+
+static void remove_name(char **argv, int *argc) {
+	if (!argv || !argc) return;
+	if (*argc <= 0) return;
+
+	/* shift left */
+	for (int i = 0; i < (*argc) - 1 && i < MAX_ARGS - 1; i++) {
+		argv[i] = argv[i+1];
+	}
+
+	/* last slot becomes NULL */
+	int last = (*argc) - 1;
+	if (last >= 0 && last < MAX_ARGS) argv[last] = NULL;
+
+	/* decrement argc */
+	(*argc)--;
+	if (*argc < 0) *argc = 0;
 }
 
 static void handle_piped_commands(pipeCmd *pipe_cmd) {
@@ -210,8 +188,8 @@ static void handle_piped_commands(pipeCmd *pipe_cmd) {
 	// cmd1 lee de stdin (0) y escribe al pipe
 	// cmd2 lee del pipe y escribe a stdout (1)
 	pid_t pids[2];
-	pids[0] = instruction_handlers[pipe_cmd->cmd1.instruction - FONT_SIZE - 1](pipe_cmd->cmd1.arguments, STDIN, pipe_fd);
-	pids[1] = instruction_handlers[pipe_cmd->cmd2.instruction - FONT_SIZE - 1](pipe_cmd->cmd2.arguments, pipe_fd, STDOUT);
+	pids[0] = instruction_handlers[pipe_cmd->cmd1.instruction - FONT_SIZE - 1](pipe_cmd->cmd1.arguments, pipe_cmd->cmd1.argc, pipe_cmd->cmd1.ground, STDIN, pipe_fd);
+	pids[1] = instruction_handlers[pipe_cmd->cmd2.instruction - FONT_SIZE - 1](pipe_cmd->cmd2.arguments, pipe_cmd->cmd2.argc, pipe_cmd->cmd2.ground, pipe_fd, STDOUT);
 	
 	// Esperar a que terminen ambos procesos
 	sys_waitProcess(pids[0]);
@@ -225,6 +203,33 @@ static void handle_piped_commands(pipeCmd *pipe_cmd) {
 	sys_mm_free(pipe_cmd);
 }
 
+static void handle_process_command(char ** argv, int argc, int inst_n){
+	int ground = check_fore(argv, &argc);
+
+	pid_t pid = instruction_handlers[inst_n - CLEAR](argv, argc, ground, STDIN, STDOUT);
+
+	if (pid < 0) {
+		printErr("Error al ejecutar el comando.\n");
+	} else if (pid == 0) {
+		printf("Proceso %s ejecutado en background.\n", instruction_list[inst_n]);
+	} else {
+		sys_waitProcess(pid);
+	}
+}
+
+static command set_cmd(char ** argv){
+	command cmd;
+	int c = 0;
+	while (argv && argv[c] != NULL && c < MAX_ARGS) c++;
+	int argc = c;
+	int ground = check_fore(argv, &argc);
+	cmd.argc = argc;
+	cmd.ground = ground;
+	cmd.arguments = argv;
+	cmd.instruction = str_in_list(argv[0], instruction_list, CANT_INSTRUCTIONS);
+	return cmd;
+}
+
 void run_shell() {
     sys_clear();
     puts(WELCOME);
@@ -235,9 +240,6 @@ void run_shell() {
         return;
     }
 
-    pipeCmd *pipe_cmd;
-    int instructions;
-
     while (1) {
         putchar('>');
         int n = read_line(line, MAX_CHARS);
@@ -245,51 +247,42 @@ void run_shell() {
             continue; 
         }
 
-        pipe_cmd = (pipeCmd *) sys_mm_alloc(sizeof(pipeCmd));
-        if (pipe_cmd == NULL) {
-            printErr("Error al asignar memoria para los argumentos.\n");
-            return;
-        }
+		char *argv[MAX_ARGS];
+		int argc = split_args(line, argv);
+		if (argc == 0) { continue; }
 
-        instructions = bufferCountInstructions(pipe_cmd, line);
+		/* comando con pipes */
+		if (str_in_list("|", argv, MAX_ARGS) != -1) {
+			pipeCmd *pipecmds = (pipeCmd *) sys_mm_alloc(sizeof(pipeCmd));
+			if (!pipecmds) {
+				printErr("Error al asignar memoria para pipeCmd\n");
+				continue;
+			}
 
-        switch (instructions) {
-            case 0: {
-                if (pipe_cmd->cmd1.instruction == -1) {
-                    printErr("Comando invalido.\n");
-                } else if (IS_BUILT_IN(pipe_cmd->cmd1.instruction)) {
-                    char **argv = NULL;
-                    int argc = split_args(pipe_cmd->cmd1.arguments, &argv);
-                    if (argc >= 0) {
-                        built_in_handlers[pipe_cmd->cmd1.instruction - HELP](argc, argv);
-                        sys_mm_free(argv);
-                    }
-                }
-                sys_mm_free(pipe_cmd->cmd1.arguments);
-                sys_mm_free(pipe_cmd);
-            } break;
+			char *cmd1[MAX_ARGS];
+			char *cmd2[MAX_ARGS];
+			separate_cmds(argv, cmd1, cmd2);
 
-            case 1: {
-                pid_t pid = instruction_handlers[pipe_cmd->cmd1.instruction - CLEAR](
-                                pipe_cmd->cmd1.arguments, STDIN, STDOUT);
+			pipecmds->cmd1 = set_cmd(cmd1);
+			pipecmds->cmd2 = set_cmd(cmd2);
 
-                if (pid < 0) {
-                    printErr("Error al ejecutar el comando.\n");
-                } else if (pid == 0) {
-                    printf("Proceso %s ejecutado en background.\n",
-                           instruction_list[pipe_cmd->cmd1.instruction]);
-                } else {
-                    sys_waitProcess(pid);
-                }
-                sys_mm_free(pipe_cmd->cmd1.arguments);
-                sys_mm_free(pipe_cmd);
-            } break;
-            case 2:
-                handle_piped_commands(pipe_cmd);
-                break;
+			handle_piped_commands(pipecmds);
+			continue;
+		}
 
-            default:
-                break;
-        }
-    }
+		/* comando sin pipes */
+		int instruction_n = str_in_list(argv[0], instruction_list, CANT_INSTRUCTIONS);
+		if (instruction_n == -1) {
+			printErr("Comando invalido, ejecuta 'help' para conocer los comandos\n");
+			continue;
+		}
+
+		if (IS_BUILT_IN(instruction_n)) {
+			remove_name(argv, &argc);
+			built_in_handlers[instruction_n - HELP](argc, argv);
+			continue;
+		}
+
+		handle_process_command(argv, argc, instruction_n);
+	}
 }

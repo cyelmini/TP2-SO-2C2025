@@ -63,15 +63,15 @@ uint64_t my_process_inc(uint64_t argc, char *argv[]) {
 uint64_t test_sync(uint64_t argc, char *argv[]) { //{n, use_sem, 0}
   uint64_t pids[2 * TOTAL_PAIR_PROCESSES];
 
-  if (argc != 2)
+  if (argc != 3)
     return -1;
 
-  char *argvDec[] = {argv[0], "-1", argv[1], NULL};
-  char *argvInc[] = {argv[0], "1", argv[1], NULL};
+  char *argvDec[] = {argv[1], "-1", argv[2], NULL};
+  char *argvInc[] = {argv[1], "1", argv[2], NULL};
 
   global = 0;
 
-  uint64_t use_sem = satoi(argv[1]);
+  uint64_t use_sem = satoi(argv[2]);
   if (use_sem) {
     if (sys_sem_create(SEM_ID, 1) != 0) {
       printf("test_sync: ERROR creating semaphore\n");

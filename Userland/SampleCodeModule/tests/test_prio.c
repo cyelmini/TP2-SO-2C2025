@@ -28,10 +28,10 @@ uint64_t test_prio(uint64_t argc, char *argv[]) {
 	char *ztm_argv[] = {0};
 	uint64_t i;
 
-	if (argc != 1)
+	if (argc != 2)
 		return -1;
 
-	if ((max_value = satoi(argv[0])) <= 0)
+	if ((max_value = satoi(argv[1])) <= 0)
 		return -1;
 
 	printf("SAME PRIORITY...\n");
