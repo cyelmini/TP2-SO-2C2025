@@ -1,5 +1,5 @@
-#ifndef SHELLFUNCTIONS_H
-#define SHELLFUNCTIONS_H
+#ifndef PROCESSFUNCTIONS_H
+#define PROCESSFUNCTIONS_H
 
 #include "shared.h"
 #include <stddef.h>
@@ -18,23 +18,6 @@ typedef struct pipecmd {
 	command cmd1;
 	command cmd2;
 } pipeCmd;
-
-/* -------------------------------------------------------------------
-   BUILT-IN COMMANDS
-   ------------------------------------------------------------------- */
-
-/*
- * Todos los built-ins comparten esta firma para poder despacharse
- * desde el mismo arreglo de punteros a función.
- */
-
-void bi_help(int argc, char **argv);
-void bi_mem(int argc);
-void bi_kill(int argc, char **argv);
-void bi_block(int argc, char **argv);
-void bi_unblock(int argc, char **argv);
-void bi_nice(int argc, char **argv);
-void bi_fontSize(int argc, char **argv);
 
 /* -------------------------------------------------------------------
    USER-SPACE APPLICATION HANDLERS
@@ -56,11 +39,10 @@ pid_t handle_loop(char **argv, int argc, int ground, int stdin, int stdout);
 pid_t handle_cat(char **argv, int argc, int ground, int stdin, int stdout);
 pid_t handle_wc(char **argv, int argc, int ground, int stdin, int stdout);
 pid_t handle_filter(char **argv, int argc, int ground, int stdin, int stdout);
-pid_t handle_mvar(char **argv, int argc, int ground, int stdin, int stdout);
 pid_t handle_test_mm(char **argv, int argc, int ground, int stdin, int stdout);
 pid_t handle_test_processes(char **argv, int argc, int ground, int stdin, int stdout);
 pid_t handle_test_priority(char **argv, int argc, int ground, int stdin, int stdout);
 pid_t handle_test_sync(char **argv, int argc, int ground, int stdin, int stdout);
 pid_t handle_test_no_sync(char **argv, int argc, int ground, int stdin, int stdout);
 
-#endif // SHELLFUNCTIONS_H
+#endif // PROCESSFUNCTIONS_H

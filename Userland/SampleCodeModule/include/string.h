@@ -1,5 +1,8 @@
 #ifndef _STRING_H
 #define _STRING_H
+
+#include <stdint.h>
+
 /**
  * @brief Determina si dos cadenas de caracteres son iguales o diferentes
  * @param s1: Cadena de caracteres
@@ -39,5 +42,7 @@ int strlen(const char *str);
 char *find_char(const char *s, char c);
 
 int str_in_list(const char *needle, char *list[], int list_len);
+
+uint32_t str_to_uint32(char *str);
 
 #endif
