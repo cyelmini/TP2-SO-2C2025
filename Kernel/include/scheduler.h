@@ -83,4 +83,6 @@ void aging(ProcessContext *p, schedulerADT scheduler);
 
 uint64_t nextscheduled(uint64_t prevRSP, schedulerADT scheduler);
 
+int changePriority(int16_t pid, uint8_t priority);
+
 #endif

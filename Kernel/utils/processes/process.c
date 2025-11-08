@@ -184,34 +184,3 @@ static char **allocArgv(char **argv, int argc) {
 	newArgv[argc] = NULL;
 	return newArgv;
 }
-
-int changePriority(int16_t pid, uint8_t priority) {
-	if (priority > LOWEST_PRIORITY || priority < HIGHEST_PRIORITY) {
-		return -1;
-	}
-
-	ProcessContext *process = findProcess(pid);
-	if (process == NULL) {
-		return -1;
-	}
-	
-	schedulerADT s = getScheduler();
-
-    if (process->status == READY && s != NULL) {
-        int oldIdx = process->priority - 1;
-        int newIdx = priority - 1;
-
-        if (removeNode(s->readyQueues[oldIdx], process) == NULL) {
-            printf("changePriority: removeNode failed for pid %d\n", pid); 
-        }
-        process->priority = priority;
-        process->basePriority = priority; 
-        addNode(s->readyQueues[newIdx], process);
-    } else {
-    
-        process->priority = priority;
-        process->basePriority = priority;
-    }
-
-    return priority;
-}
