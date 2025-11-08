@@ -59,10 +59,6 @@ uint64_t schedule(uint64_t prevRSP) {
         return prevRSP;
     }
 
-	if(scheduler->currentPid == NO_PROCESS){
-		return nextscheduled(prevRSP, scheduler);
-	}
-
 	if (scheduler->currentProcess != NULL) {
         if (scheduler->currentProcess->status == TERMINATED) {
             freeProcess(scheduler->currentProcess);
@@ -454,17 +450,6 @@ static int64_t kill(schedulerADT scheduler, ProcessContext *process) {
 
 	if(scheduler->currentProcess != process){
 		freeProcess(process);
-	}
-
-	printf("Ahora las queues estan asi:\n");
-	for (int i = 0; i < NUM_PRIORITIES; i++) {
-		printf("Priority %d: ", i + 1);
-		toBegin(scheduler->readyQueues[i]);
-		while (hasNext(scheduler->readyQueues[i])) {
-			ProcessContext *p = nextInList(scheduler->readyQueues[i]);
-			printf("%d ", p->pid);
-		}
-		printf("\n");
 	}
 
 	return 0;
