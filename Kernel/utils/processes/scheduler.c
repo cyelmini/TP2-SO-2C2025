@@ -83,7 +83,7 @@ uint64_t schedule(uint64_t prevRSP) {
     toBegin(scheduler->processList);
     while (hasNext(scheduler->processList)) {
         ProcessContext *p = nextInList(scheduler->processList);
-        if (p->status == READY) {
+        if (p->status == READY && (scheduler->globalTicks - p->quantumTicks) >= AGING_THRESHOLD_TICKS && p->priority > HIGHEST_PRIORITY) {
             aging(p, scheduler);
         }
 		if ((scheduler->globalTicks % PRIORITY_RESET_TICKS) == 0 && (p->priority != p->basePriority) && p->status == READY) {
@@ -126,22 +126,19 @@ uint64_t nextscheduled(uint64_t prevRSP, schedulerADT scheduler){
 }
 
 void aging(ProcessContext *p, schedulerADT scheduler){
-    if ((scheduler->globalTicks - p->quantumTicks) >= AGING_THRESHOLD_TICKS && p->priority > HIGHEST_PRIORITY) {
 		int oldIdx = p->priority - 1;
         int newPriority = p->priority - 1;
         int newIdx = newPriority - 1;
 
-        if (newIdx >= 0){
-						
-            if (removeNode(scheduler->readyQueues[oldIdx], p) != NULL) {
-                p->priority = newPriority;
-                addNode(scheduler->readyQueues[newIdx], p);
-            } else {
-                printf("Aging: process not found in ready queue\n");
-            }
-        	p->quantumTicks = scheduler->globalTicks;
-    	}
-    }     
+    if (newIdx >= 0){			
+        if (removeNode(scheduler->readyQueues[oldIdx], p) != NULL) {
+            p->priority = newPriority;
+            addNode(scheduler->readyQueues[newIdx], p);
+        } else {
+            printf("Aging: process not found in ready queue\n");
+        }
+        p->quantumTicks = scheduler->globalTicks;
+    }  
 }
 
 void priority_reset(ProcessContext *p, schedulerADT scheduler){
@@ -180,12 +177,10 @@ int16_t createProcess(uint64_t rip, char **args, int argc, uint8_t priority, int
     	}
 	}
 	if (pid == MAX_PROCESS) {
-    	/* no free pid found */
     	freeProcess(newProcess);
     	return -1;
 	}
 
-	/* ahora inicializar con pid */
 	if (initializeProcess(newProcess, pid, args, argc, priority, rip, ground, fileDescriptors) == -1) {
     	freeProcess(newProcess);
     	return -1;
@@ -459,6 +454,17 @@ static int64_t kill(schedulerADT scheduler, ProcessContext *process) {
 
 	if(scheduler->currentProcess != process){
 		freeProcess(process);
+	}
+
+	printf("Ahora las queues estan asi:\n");
+	for (int i = 0; i < NUM_PRIORITIES; i++) {
+		printf("Priority %d: ", i + 1);
+		toBegin(scheduler->readyQueues[i]);
+		while (hasNext(scheduler->readyQueues[i])) {
+			ProcessContext *p = nextInList(scheduler->readyQueues[i]);
+			printf("%d ", p->pid);
+		}
+		printf("\n");
 	}
 
 	return 0;
