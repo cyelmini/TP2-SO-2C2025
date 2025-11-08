@@ -18,10 +18,12 @@
 #define CANT_PROCESS (CANT_INSTRUCTIONS - CANT_BUILTIN -1)
 #define MAX_ARGS 16
 
-static void handle_piped_commands(pipeCmd *pipe_cmd);
 static int split_args(char *args, char **out_argv);
 static void separate_cmds(char ** argv, char ** cmd1, char ** cmd2);
-
+static int check_fore(char ** argv, int * argc);
+static void remove_name(char **argv, int *argc);
+static void handle_piped_commands(pipeCmd *pipe_cmd);
+static void handle_process_command(char ** argv, int argc, int inst_n);
 
 typedef enum {
 	// built-in
@@ -105,52 +107,6 @@ static int split_args(char *args, char **out_argv) {
 	return argc;
 }
 
-static void handle_piped_commands(pipeCmd *pipe_cmd) {
-
-	if (pipe_cmd->cmd1.instruction == -1 || pipe_cmd->cmd2.instruction == -1) {
-		printErr("Comando invalido.\n");
-		sys_mm_free(pipe_cmd->cmd1.arguments);
-		sys_mm_free(pipe_cmd->cmd2.arguments);
-		sys_mm_free(pipe_cmd);
-		return;
-	}
-	
-	if (IS_BUILT_IN(pipe_cmd->cmd1.instruction) || IS_BUILT_IN(pipe_cmd->cmd2.instruction)) {
-		printErr("No se pueden usar comandos built-in con pipes.\n");
-		sys_mm_free(pipe_cmd->cmd1.arguments);
-		sys_mm_free(pipe_cmd->cmd2.arguments);
-		sys_mm_free(pipe_cmd);
-		return;
-	}
-	
-	int pipe_fd = sys_pipe_create();
-	if (pipe_fd < 0) {
-		printErr("Error al crear el pipe\n");
-		sys_mm_free(pipe_cmd->cmd1.arguments);
-		sys_mm_free(pipe_cmd->cmd2.arguments);
-		sys_mm_free(pipe_cmd);
-		return;
-	}
-	
-	// Crear ambos procesos
-	// cmd1 lee de stdin (0) y escribe al pipe
-	// cmd2 lee del pipe y escribe a stdout (1)
-	pid_t pids[2];
-	pids[0] = instruction_handlers[pipe_cmd->cmd1.instruction - FONT_SIZE - 1](pipe_cmd->cmd1.arguments, pipe_cmd->cmd1.argc, pipe_cmd->cmd1.ground, STDIN, pipe_fd);
-	pids[1] = instruction_handlers[pipe_cmd->cmd2.instruction - FONT_SIZE - 1](pipe_cmd->cmd2.arguments, pipe_cmd->cmd2.argc, pipe_cmd->cmd2.ground, pipe_fd, STDOUT);
-	
-	// Esperar a que terminen ambos procesos
-	sys_waitProcess(pids[0]);
-	sys_mm_free(pipe_cmd->cmd1.arguments);
-	
-	sys_waitProcess(pids[1]);
-	sys_mm_free(pipe_cmd->cmd2.arguments);
-	
-	// Cerrar el pipe
-	sys_pipe_close(pipe_fd);
-	sys_mm_free(pipe_cmd);
-}
-
 static void separate_cmds(char ** argv, char ** cmd1, char ** cmd2){
 	if (!argv || !cmd1 || !cmd2) return;
 
@@ -197,6 +153,52 @@ static void remove_name(char **argv, int *argc) {
 	/* decrement argc */
 	(*argc)--;
 	if (*argc < 0) *argc = 0;
+}
+
+static void handle_piped_commands(pipeCmd *pipe_cmd) {
+
+	if (pipe_cmd->cmd1.instruction == -1 || pipe_cmd->cmd2.instruction == -1) {
+		printErr("Comando invalido.\n");
+		sys_mm_free(pipe_cmd->cmd1.arguments);
+		sys_mm_free(pipe_cmd->cmd2.arguments);
+		sys_mm_free(pipe_cmd);
+		return;
+	}
+	
+	if (IS_BUILT_IN(pipe_cmd->cmd1.instruction) || IS_BUILT_IN(pipe_cmd->cmd2.instruction)) {
+		printErr("No se pueden usar comandos built-in con pipes.\n");
+		sys_mm_free(pipe_cmd->cmd1.arguments);
+		sys_mm_free(pipe_cmd->cmd2.arguments);
+		sys_mm_free(pipe_cmd);
+		return;
+	}
+	
+	int pipe_fd = sys_pipe_create();
+	if (pipe_fd < 0) {
+		printErr("Error al crear el pipe\n");
+		sys_mm_free(pipe_cmd->cmd1.arguments);
+		sys_mm_free(pipe_cmd->cmd2.arguments);
+		sys_mm_free(pipe_cmd);
+		return;
+	}
+	
+	// Crear ambos procesos
+	// cmd1 lee de stdin (0) y escribe al pipe
+	// cmd2 lee del pipe y escribe a stdout (1)
+	pid_t pids[2];
+	pids[0] = instruction_handlers[pipe_cmd->cmd1.instruction - FONT_SIZE - 1](pipe_cmd->cmd1.arguments, pipe_cmd->cmd1.argc, pipe_cmd->cmd1.ground, STDIN, pipe_fd);
+	pids[1] = instruction_handlers[pipe_cmd->cmd2.instruction - FONT_SIZE - 1](pipe_cmd->cmd2.arguments, pipe_cmd->cmd2.argc, pipe_cmd->cmd2.ground, pipe_fd, STDOUT);
+	
+	// Esperar a que terminen ambos procesos
+	sys_waitProcess(pids[0]);
+	sys_mm_free(pipe_cmd->cmd1.arguments);
+	
+	sys_waitProcess(pids[1]);
+	sys_mm_free(pipe_cmd->cmd2.arguments);
+	
+	// Cerrar el pipe
+	sys_pipe_close(pipe_fd);
+	sys_mm_free(pipe_cmd);
 }
 
 static void handle_process_command(char ** argv, int argc, int inst_n){
@@ -247,8 +249,8 @@ void run_shell() {
 		int argc = split_args(line, argv);
 		if (argc == 0) { continue; }
 
-	/* If there is a pipe, build a pipeCmd and dispatch */
-	if (str_in_list("|", argv, MAX_ARGS) != -1) {
+		/* comando con pipes */
+		if (str_in_list("|", argv, MAX_ARGS) != -1) {
 			pipeCmd *pipecmds = (pipeCmd *) sys_mm_alloc(sizeof(pipeCmd));
 			if (!pipecmds) {
 				printErr("Error al asignar memoria para pipeCmd\n");
@@ -266,7 +268,7 @@ void run_shell() {
 			continue;
 		}
 
-		/* Non-piped command: parse instruction and dispatch */
+		/* comando sin pipes */
 		int instruction_n = str_in_list(argv[0], instruction_list, CANT_INSTRUCTIONS);
 		if (instruction_n == -1) {
 			printErr("Comando invalido, ejecuta 'help' para conocer los comandos\n");
