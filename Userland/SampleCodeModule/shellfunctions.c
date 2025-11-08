@@ -470,11 +470,11 @@ pid_t handle_test_sync(char **argv, int argc, int ground, int stdin, int stdout)
 static uint64_t run_test_sync(int argc, char **argv) {
 	printf("[test_sync] Iniciando prueba de sincronizacion con semaforos...\n");
 	
-	if (argc > 0 && argv[0] && *argv[0]) {
-		printf("Iteraciones: %s\n", argv[0]);
-	}
 	if (argc > 1 && argv[1] && *argv[1]) {
-		printf("Usar semaforos: %s\n", argv[1]);
+		printf("Iteraciones: %s\n", argv[1]);
+	}
+	if (argc > 2 && argv[2] && *argv[2]) {
+		printf("Usar semaforos: %s\n", argv[2]);
 	}
 	
 	uint64_t result = test_sync(argc, argv);
