@@ -387,8 +387,8 @@ pid_t handle_test_mm(char **argv, int argc, int ground, int stdin, int stdout) {
 static uint64_t run_test_mm(int argc, char **argv) {
 	printf("[test_mm] Iniciando test del administrador de memoria...\n");
 
-	if (argc > 0 && argv[0] && *argv[0])
-		printf("Tamanio maximo de prueba: %s bytes\n", argv[0]);
+	if (argc > 0 && argv[1] && *argv[1])
+		printf("Tamanio maximo de prueba: %s bytes\n", argv[1]);
 
 	uint64_t result = test_mm(argc, argv);
 
