@@ -9,8 +9,9 @@
 
 typedef struct command {
 	int instruction;
-	char *arguments;
-	char foreground; // 1 si es foreground, 0 si es background
+	char ** arguments;
+	int argc;
+	char ground; // 1 si es foreground, 0 si es background
 } command;
 
 typedef struct pipecmd {
@@ -49,17 +50,17 @@ void bi_fontSize(int argc, char **argv);
  *   - pid = 0  → proceso en background
  *   - pid < 0  → error
  */
-pid_t handle_clear(char *arg, int stdin, int stdout);
-pid_t handle_ps(char *arg, int stdin, int stdout);
-pid_t handle_loop(char *arg, int stdin, int stdout);
-pid_t handle_cat(char *arg, int stdin, int stdout);
-pid_t handle_wc(char *arg, int stdin, int stdout);
-pid_t handle_filter(char *arg, int stdin, int stdout);
-pid_t handle_mvar(char *arg, int stdin, int stdout);
-pid_t handle_test_mm(char *arg, int stdin, int stdout);
-pid_t handle_test_processes(char *arg, int stdin, int stdout);
-pid_t handle_test_priority(char *arg, int stdin, int stdout);
-pid_t handle_test_sync(char *arg, int stdin, int stdout);
-pid_t handle_test_no_sync(char *arg, int stdin, int stdout);
+pid_t handle_clear(char **argv, int argc, int ground, int stdin, int stdout);
+pid_t handle_ps(char **argv, int argc, int ground, int stdin, int stdout);
+pid_t handle_loop(char **argv, int argc, int ground, int stdin, int stdout);
+pid_t handle_cat(char **argv, int argc, int ground, int stdin, int stdout);
+pid_t handle_wc(char **argv, int argc, int ground, int stdin, int stdout);
+pid_t handle_filter(char **argv, int argc, int ground, int stdin, int stdout);
+pid_t handle_mvar(char **argv, int argc, int ground, int stdin, int stdout);
+pid_t handle_test_mm(char **argv, int argc, int ground, int stdin, int stdout);
+pid_t handle_test_processes(char **argv, int argc, int ground, int stdin, int stdout);
+pid_t handle_test_priority(char **argv, int argc, int ground, int stdin, int stdout);
+pid_t handle_test_sync(char **argv, int argc, int ground, int stdin, int stdout);
+pid_t handle_test_no_sync(char **argv, int argc, int ground, int stdin, int stdout);
 
 #endif // SHELLFUNCTIONS_H

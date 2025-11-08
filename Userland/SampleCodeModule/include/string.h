@@ -38,4 +38,6 @@ int strlen(const char *str);
  */
 char *find_char(const char *s, char c);
 
+int str_in_list(const char *needle, char *list[], int list_len);
+
 #endif

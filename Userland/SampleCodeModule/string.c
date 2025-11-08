@@ -44,3 +44,12 @@ char *find_char(const char *s, char c) {
 	}
 	return NULL;
 }
+
+int str_in_list(const char *needle, char *list[], int list_len) {
+	if (!needle || !list || list_len <= 0) return 0;
+	for (int i = 0; i < list_len; i++) {
+		if (list[i] && strcmp(needle, list[i]) == 0)
+			return i;
+	}
+	return 0;
+}

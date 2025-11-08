@@ -170,23 +170,13 @@ void bi_mem(int argc) {
 
 /* ------------------------ CLEAR ------------------------ */
 
-pid_t handle_clear(char *arg, int stdin, int stdout) {
-	char ground = 0;
+pid_t handle_clear(char **argv, int argc, int ground, int stdin, int stdout) {
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
 
-	if(arg != NULL && *arg != '\0'){
-		ground = findground(arg);
-		if(checkparams(arg) == -1){
-			printf("Uso: clear [&]\n");
-			return -1;
-		}
-	}
-
-	char *argv[] = {"clear"};
-
-	pid_t pid = sys_createProcess((uint64_t) clear, argv, 1, priority, ground, fds);
-	return !ground ? pid : 0 ;
+	/* create process using provided argv/argc */
+	pid_t pid = sys_createProcess((uint64_t) clear, argv, argc > 0 ? argc : 1, priority, (char)ground, fds);
+	return ground ? pid : 0 ;
 }
 
 static uint64_t clear() {
@@ -197,23 +187,12 @@ static uint64_t clear() {
 
 /* ------------------------ PS ------------------------ */
 
-pid_t handle_ps(char *arg, int stdin, int stdout) {
+pid_t handle_ps(char **argv, int argc, int ground, int stdin, int stdout) {
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
-	char ground = 0; 
 
-	if(arg != NULL && *arg != '\0'){
-		ground = findground(arg);
-		if(checkparams(arg) == -1){
-			printf("Uso: ps [&]\n");
-			return -1;
-		}
-	}
-
-	char *argv[] = {"ps"};
-
-	pid_t pid = sys_createProcess((uint64_t) ps, argv, 1, priority, ground, fds);
-	return !ground ? pid : 0;
+	pid_t pid = sys_createProcess((uint64_t) ps, argv, argc > 0 ? argc : 1, priority, (char)ground, fds);
+	return ground ? pid : 0;
 }
 
 static uint64_t ps() {
@@ -243,33 +222,12 @@ static uint64_t ps() {
 
 /* ------------------------ LOOP ------------------------ */
 
-pid_t handle_loop(char *arg, int stdin, int stdout) {
-	int argc;
-	char *argv[3];
-	argv[0]="loop";
-
-	if (arg != NULL && *arg != '\0') {
-		argc = 2;
-		argv[1] = arg;
-	} else {
-		argc = 1;
-	}
-
+pid_t handle_loop(char **argv, int argc, int ground, int stdin, int stdout) {
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
-	char ground = 0; 
 
-	if(arg != NULL && *arg != '\0'){
-		ground = findground(arg);
-		if(checkparamsloop(arg) == -1){
-			printf("Uso: loop [intervalo] [&]\n");
-			return -1;
-		}
-	}
-
-
-	pid_t pid = sys_createProcess((uint64_t) loop, argv, argc, priority, ground, fds);
-	return !ground ? pid : 0;
+	pid_t pid = sys_createProcess((uint64_t) loop, argv, argc > 0 ? argc : 1, priority, (char)ground, fds);
+	return ground ? pid : 0;
 }
 
 static uint64_t loop(int argc, char **argv) {
@@ -293,13 +251,12 @@ static uint64_t loop(int argc, char **argv) {
 
 /* ------------------------ CAT ------------------------ */
 
-pid_t handle_cat(char *arg, int stdin, int stdout) {
-	char *argv[] = {"cat"};
+pid_t handle_cat(char **argv, int argc, int ground, int stdin, int stdout) {
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
-	char ground = 0;
 
-	return (pid_t) sys_createProcess((uint64_t) cat, argv, 1, priority, ground, fds);
+	pid_t pid = (pid_t) sys_createProcess((uint64_t) cat, argv, argc > 0 ? argc : 1, priority, (char)ground, fds);
+	return ground ? pid : 0;
 }
 
 static uint64_t cat() {
@@ -315,12 +272,11 @@ static uint64_t cat() {
 
 /* ------------------------ WC ------------------------ */
 
-pid_t handle_wc(char *arg, int stdin, int stdout) {
-	char *argv[] = {"wc"};
+pid_t handle_wc(char **argv, int argc, int ground, int stdin, int stdout) {
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
-	char ground = 0;
-	return (pid_t) sys_createProcess((uint64_t) wc, argv, 1, priority, ground, fds);
+	pid_t pid = (pid_t) sys_createProcess((uint64_t) wc, argv, argc > 0 ? argc : 1, priority, (char)ground, fds);
+	return ground ? pid : 0;
 }
 
 static uint64_t wc() {
@@ -348,12 +304,11 @@ static uint64_t is_vowel(char c) {
 	        c == 'A' || c == 'E' || c == 'I' || c == 'O' || c == 'U');
 }
 
-pid_t handle_filter(char *arg, int stdin, int stdout) {
-	char *argv[] = {"filter"};
+pid_t handle_filter(char **argv, int argc, int ground, int stdin, int stdout) {
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
-	char ground = 0;
-	return (pid_t) sys_createProcess((uint64_t) filter, argv, 1, priority, ground, fds);
+	pid_t pid = (pid_t) sys_createProcess((uint64_t) filter, argv, argc > 0 ? argc : 1, priority, (char)ground, fds);
+	return ground ? pid : 0;
 }
 
 static uint64_t filter() {
@@ -372,31 +327,16 @@ static uint64_t filter() {
 
 /* ------------------------ MVAR ------------------------ */
 
-pid_t handle_mvar(char *arg, int stdin, int stdout) {
-	if (!arg || !(*arg)) {
+pid_t handle_mvar(char **argv, int argc, int ground, int stdin, int stdout) {
+	/* Expect argv: ["mvar", writers, readers]
+	   Validate minimal args and forward to a spawned process as before. */
+	if (argc < 3 || !argv[1] || !argv[2]) {
 		printf("Uso: mvar <writers> <readers>\n");
 		return -1;
 	}
 
-	// parse args: two integers
-	char *entrada = arg;
-	char *separador = NULL;
-	for (char *p = arg; *p; p++) {
-		if (*p == ' ') {
-			separador = p;
-			*p = '\0';
-			break;
-		}
-	}
-	if (!separador) {
-		printf("Uso: mvar <writers> <readers>\n");
-		return -1;
-	}
-	char *escritores_str = entrada;
-	char *lectores_str = separador + 1;
-
-	int cantidad_escritores = (int) str_to_uint32(escritores_str);
-	int cantidad_lectores = (int) str_to_uint32(lectores_str);
+	int cantidad_escritores = (int) str_to_uint32(argv[1]);
+	int cantidad_lectores = (int) str_to_uint32(argv[2]);
 	if (cantidad_escritores <= 0 || cantidad_lectores <= 0) {
 		printf("Uso: mvar <writers> <readers> (valores > 0)\n");
 		return -1;
@@ -422,7 +362,6 @@ pid_t handle_mvar(char *arg, int stdin, int stdout) {
 	for (int idx_lector = 0; idx_lector < cantidad_lectores; idx_lector++) {
 		char *arg_id = (char *) sys_mm_alloc(4);
 		if (!arg_id) continue;
-		// pass an id as string
 		arg_id[0] = '0' + (idx_lector % 10);
 		arg_id[1] = '\0';
 		char *rargv[] = { arg_id };
@@ -436,19 +375,17 @@ pid_t handle_mvar(char *arg, int stdin, int stdout) {
 
 /* ------------------------ TEST_MM ------------------------ */
 
-pid_t handle_test_mm(char *arg, int stdin, int stdout) {
-	if (!arg || !(*arg)) {
+pid_t handle_test_mm(char **argv, int argc, int ground, int stdin, int stdout) {
+	if (argc < 2 || !argv[1]) {
 		printf("Uso: testmem <max_memory>\n");
 		return -1;
 	}
 
-	char *argv[] = {arg};
-	int argc = 1;
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
-	char ground = 0;
 
-	return (pid_t) sys_createProcess((uint64_t) run_test_mm, argv, argc, priority, ground, fds);
+	pid_t pid = (pid_t) sys_createProcess((uint64_t) run_test_mm, argv, argc, priority, (char)ground, fds);
+	return ground ? pid : 0;
 }
 
 static uint64_t run_test_mm(int argc, char **argv) {
@@ -470,26 +407,12 @@ static uint64_t run_test_mm(int argc, char **argv) {
 
 /* ------------------------ TEST_PROCESSES ------------------------ */
 
-pid_t handle_test_processes(char *arg, int stdin, int stdout) {
-    char *argv[] = { arg };
-    int argc;
+pid_t handle_test_processes(char **argv, int argc, int ground, int stdin, int stdout) {
+	int16_t fds[] = { stdin, stdout, STDERR };
+	uint8_t priority = 1;
 
-    int16_t fds[] = { stdin, stdout, STDERR };
-    uint8_t priority = 1;
-    char ground = 0; 
-
-	if(arg != NULL && *arg != '\0'){
-		ground = findground(arg);
-		if(checkparamstest(arg) == -1){
-			printf("Uso: testproc <max_processes> [&]\n");
-			return -1;
-		}
-	}
-
-	argc = 1;
-
-    pid_t pid = sys_createProcess((uint64_t) run_test_processes, argv, argc, priority, ground, fds);
-	return !ground ? pid : 0;
+	pid_t pid = sys_createProcess((uint64_t) run_test_processes, argv, argc > 0 ? argc : 1, priority, (char)ground, fds);
+	return ground ? pid : 0;
 }
 
 static uint64_t run_test_processes(int argc, char **argv) {
@@ -507,20 +430,17 @@ static uint64_t run_test_processes(int argc, char **argv) {
 
 /* ------------------------ TEST_PRIORITY ------------------------ */
 
-pid_t handle_test_priority(char *arg, int stdin, int stdout) {
-    char *argv[] = { arg };
-    int argc = (arg && *arg) ? 1 : 0;
+pid_t handle_test_priority(char **argv, int argc, int ground, int stdin, int stdout) {
+	if (argc < 2 || !argv[1]) {
+		printf("Uso: testprio <max_value>\n");
+		return -1;
+	}
 
-    if (argc != 1) {
-        printf("Uso: testprio <max_value>\n");
-        return -1;
-    }
+	int16_t fds[] = { stdin, stdout, STDERR };
+	uint8_t priority = 1;
 
-    int16_t fds[] = { stdin, stdout, STDERR };
-    uint8_t priority = 1;
-    char ground = 0; 
-
-    return (pid_t) sys_createProcess((uint64_t) run_test_priority, argv, argc, priority, ground, fds);
+	pid_t pid = (pid_t) sys_createProcess((uint64_t) run_test_priority, argv, argc, priority, (char)ground, fds);
+	return ground ? pid : 0;
 }
 
 static uint64_t run_test_priority(int argc, char **argv) {
@@ -538,44 +458,17 @@ static uint64_t run_test_priority(int argc, char **argv) {
 
 /* ------------------------ TEST_SYNC ------------------------ */
 
-pid_t handle_test_sync(char *arg, int stdin, int stdout) {
-	char *argv[3];
-	int argc = 0;
-	
-	if (!arg || !(*arg)) {
-		printf("Uso: testsync <iteraciones> <usar_sem>\n");
-		printf("  <iteraciones>: numero de incrementos/decrementos por proceso\n");
-		printf("  <usar_sem>: 1 = con semaforos, 0 = sin semaforos\n");
-		return -1;
-	}
-	
-	char *token = arg;
-	char *space = NULL;
-	
-	for (char *p = arg; *p; p++) {
-		if (*p == ' ') {
-			space = p;
-			*p = '\0'; 
-			break;
-		}
-	}
-	
-	if (!space) {
-		printf("Error: se requieren dos argumentos\n");
+pid_t handle_test_sync(char **argv, int argc, int ground, int stdin, int stdout) {
+	if (argc < 3) {
 		printf("Uso: testsync <iteraciones> <usar_sem>\n");
 		return -1;
 	}
-	
-	argv[0] = token;      // iteraciones
-	argv[1] = space + 1;  // usar_sem
-	argv[2] = NULL;
-	argc = 2;
-	
+
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
-	char ground = 0;
-	
-	return (pid_t) sys_createProcess((uint64_t) run_test_sync, argv, argc, priority, ground, fds);
+
+	pid_t pid = (pid_t) sys_createProcess((uint64_t) run_test_sync, argv, argc, priority, (char)ground, fds);
+	return ground ? pid : 0;
 }
 
 static uint64_t run_test_sync(int argc, char **argv) {
