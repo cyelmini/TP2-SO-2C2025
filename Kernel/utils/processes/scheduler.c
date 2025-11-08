@@ -74,7 +74,6 @@ uint64_t schedule(uint64_t prevRSP) {
         }
 	}
 
-
 	//aging + periodic reset
     toBegin(scheduler->processList);
     while (hasNext(scheduler->processList)) {
