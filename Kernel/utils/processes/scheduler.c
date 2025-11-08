@@ -23,13 +23,15 @@ void createScheduler() {
 	}
 
 	scheduler->processList = createDoubleLinkedListADT();
-	scheduler->readyProcess = createDoubleLinkedListADT();
+	for (int i = 0; i < NUM_PRIORITIES; i++) {
+    scheduler->readyQueues[i] = createDoubleLinkedListADT();
+	}
 	scheduler->blockedProcess = createDoubleLinkedListADT();
 	scheduler->currentPid = -1;
 	scheduler->currentProcess = NULL;
 	scheduler->processQty = 0;
-	scheduler->quantums = MIN_QUANTUMS;
 	scheduler->globalTicks = 0;
+	scheduler->quantums = MIN_QUANTUMS;
 
 	created = 1;
 
@@ -37,49 +39,70 @@ void createScheduler() {
 
 	int16_t fileDescriptors[] = {-1, -1, STDERR};
 
-	createProcess((uint64_t) idle, argsIdle, 1, MIN_PRIORITY, fileDescriptors, 1);
+	createProcess((uint64_t) idle, argsIdle, 1, LOWEST_PRIORITY, fileDescriptors, 1);
 }
 
 uint64_t schedule(uint64_t prevRSP) {
-	if (created == 0) {
+	if(created == 0){
 		return prevRSP;
 	}
+
 	schedulerADT scheduler = getScheduler();
-	if (scheduler == NULL) {
+	if(scheduler == NULL){
 		return prevRSP;
 	}
-	scheduler->quantums--;
+
+	scheduler->globalTicks++;
+    scheduler->quantums--;
 
 	if (scheduler->processQty == 0 || scheduler->quantums > 0) {
-		return prevRSP;
-	}
+        return prevRSP;
+    }
 
-	if (scheduler->currentPid == NO_PROCESS) {
-		scheduler->currentProcess = getFirstData(scheduler->readyProcess);
-		if (scheduler->currentProcess == NULL) {
-			return prevRSP;
-		}
-		scheduler->currentPid = scheduler->currentProcess->pid;
-		scheduler->quantums = scheduler->currentProcess->priority;
-		scheduler->currentProcess->status = RUNNING;
-		return scheduler->currentProcess->stackPos;
+	if(scheduler->currentPid == NO_PROCESS){
+		return nextscheduled(prevRSP, scheduler);
 	}
 
 	if (scheduler->currentProcess != NULL) {
-		if (scheduler->currentProcess->status == TERMINATED) {
-			freeProcess(scheduler->currentProcess);
-			scheduler->currentProcess = NULL;
-			scheduler->currentPid = NO_PROCESS;
-		} else {
-			scheduler->currentProcess->stackPos = prevRSP;
-			if (scheduler->currentProcess->status == RUNNING) {
-				scheduler->currentProcess->status = READY;
-				addNode(scheduler->readyProcess, scheduler->currentProcess);
-			}
+        if (scheduler->currentProcess->status == TERMINATED) {
+            freeProcess(scheduler->currentProcess);
+            scheduler->currentProcess = NULL;
+            scheduler->currentPid = NO_PROCESS;
+        }else {
+            scheduler->currentProcess->stackPos = prevRSP;
+            if (scheduler->currentProcess->status == RUNNING) {
+                scheduler->currentProcess->status = READY;
+                int idx = scheduler->currentProcess->priority - 1;
+                addNode(scheduler->readyQueues[idx], scheduler->currentProcess);
+            }
+        }
+	}
+
+
+	//aging + periodic reset
+    toBegin(scheduler->processList);
+    while (hasNext(scheduler->processList)) {
+        ProcessContext *p = nextInList(scheduler->processList);
+        if (p->status == READY) {
+            aging(p, scheduler);
+        }
+		if ((scheduler->globalTicks % PRIORITY_RESET_TICKS) == 0 && (p->priority != p->basePriority) && p->status == READY) {
+            priority_reset(p, scheduler);
 		}
 	}
 
-	ProcessContext *firstProcess = getFirstData(scheduler->readyProcess);
+	return nextscheduled(prevRSP, scheduler);
+}
+
+uint64_t nextscheduled(uint64_t prevRSP, schedulerADT scheduler){
+	ProcessContext *firstProcess = NULL;
+	for (int i = 0; i < NUM_PRIORITIES; i++) {
+		if (!isEmpty(scheduler->readyQueues[i])) {
+			firstProcess = getFirstData(scheduler->readyQueues[i]);
+			break;
+		}
+	}
+
 	if (firstProcess == NULL) {
 		ProcessContext *idle = findProcess(IDLE_PID);
 		if (idle == NULL) {
@@ -87,17 +110,49 @@ uint64_t schedule(uint64_t prevRSP) {
 		} else {
 			scheduler->currentProcess = idle;
 			scheduler->currentPid = idle->pid;
-			scheduler->quantums = idle->priority;
+			scheduler->quantums = RR_QUANTUM_TICKS;
 			idle->status = RUNNING;
+			idle->quantumTicks = scheduler->globalTicks;
 			return idle->stackPos;
 		}
 	}
 
 	scheduler->currentProcess = firstProcess;
-	scheduler->currentPid = scheduler->currentProcess->pid;
-	scheduler->quantums = scheduler->currentProcess->priority;
+	scheduler->currentPid = firstProcess->pid;
+	scheduler->quantums = RR_QUANTUM_TICKS;
 	scheduler->currentProcess->status = RUNNING;
+	scheduler->currentProcess->quantumTicks = scheduler->globalTicks;
 	return scheduler->currentProcess->stackPos;
+}
+
+void aging(ProcessContext *p, schedulerADT scheduler){
+    if ((scheduler->globalTicks - p->quantumTicks) >= AGING_THRESHOLD_TICKS && p->priority > HIGHEST_PRIORITY) {
+		int oldIdx = p->priority - 1;
+        int newPriority = p->priority - 1;
+        int newIdx = newPriority - 1;
+
+        if (newIdx >= 0){
+						
+            if (removeNode(scheduler->readyQueues[oldIdx], p) != NULL) {
+                p->priority = newPriority;
+                addNode(scheduler->readyQueues[newIdx], p);
+            } else {
+                printf("Aging: process not found in ready queue\n");
+            }
+        	p->quantumTicks = scheduler->globalTicks;
+    	}
+    }     
+}
+
+void priority_reset(ProcessContext *p, schedulerADT scheduler){
+	int oldIdx = p->priority - 1;
+    int baseIdx = p->basePriority - 1;
+    if (removeNode(scheduler->readyQueues[oldIdx], p) != NULL) {
+        p->priority = p->basePriority;
+        addNode(scheduler->readyQueues[baseIdx], p);
+    } else {
+        printf("Reset: process not found in ready queue\n");
+	}
 }
 
 int16_t createProcess(uint64_t rip, char **args, int argc, uint8_t priority, int16_t fileDescriptors[], char ground) {
@@ -136,9 +191,13 @@ int16_t createProcess(uint64_t rip, char **args, int argc, uint8_t priority, int
     	return -1;
 	}
 
+	newProcess->quantumTicks = scheduler->globalTicks;
+
 	addNode(scheduler->processList, newProcess);
 	if (newProcess->status == READY) {
-		addNode(scheduler->readyProcess, newProcess);
+		int idx = newProcess->priority - 1; //priority 1 -> idx 0 
+    	addNode(scheduler->readyQueues[idx], newProcess);
+
 	} else if (newProcess->status == BLOCKED) {
 		addNode(scheduler->blockedProcess, newProcess);
 	}
@@ -223,10 +282,11 @@ int64_t setReadyProcess(int16_t pid) {
 		if (removeNode(scheduler->blockedProcess, process) == NULL) {
 			return -1;
 		}
-		if (addNode(scheduler->readyProcess, process) == NULL) {
-			return -1;
-		}
-		process->status = READY;
+		int idx = process->priority - 1;
+        if (addNode(scheduler->readyQueues[idx], process) == NULL) {
+            return -1;
+        }
+        process->status = READY;
 	}
 	return 0;
 }
@@ -239,7 +299,7 @@ int64_t blockProcess(int16_t pid) {
 	}
 	if (process->status == RUNNING || process->status == READY) {
 		if (process->status == READY) {
-			if (removeNode(scheduler->readyProcess, process) == NULL)
+			if (removeNode(scheduler->readyQueues[process->priority - 1], process) == NULL)
 				return -1;
 		}
 		if (addNode(scheduler->blockedProcess, process) == NULL)
@@ -373,7 +433,7 @@ static int16_t pipedFd(int16_t *fds) {
 
 static int64_t kill(schedulerADT scheduler, ProcessContext *process) {
 	if (process->status == READY) {
-		if (removeNode(scheduler->readyProcess, process) == NULL) {
+		if (removeNode(scheduler->readyQueues[process->priority - 1], process) == NULL) {
 			return -1;
 		}
 	}

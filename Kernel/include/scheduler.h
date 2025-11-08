@@ -5,9 +5,14 @@
 #include <stdint.h>
 
 #define MAX_PROCESS 30
+
+#define NUM_PRIORITIES 5
+#define HIGHEST_PRIORITY 1
+#define LOWEST_PRIORITY 5
 #define MIN_QUANTUMS 1
-#define MIN_PRIORITY 1
-#define MAX_PRIORITY 10
+#define RR_QUANTUM_TICKS 2
+#define AGING_THRESHOLD_TICKS 100
+#define PRIORITY_RESET_TICKS 1000
 
 #define NO_PROCESS -1
 #define IDLE_PID 0
@@ -19,7 +24,7 @@
 
 typedef struct schedulerCDT {
 	doubleLinkedListADT processList;
-	doubleLinkedListADT readyProcess;
+	doubleLinkedListADT readyQueues[NUM_PRIORITIES];
 	doubleLinkedListADT blockedProcess;
 
 	int16_t currentPid;
@@ -71,5 +76,11 @@ int64_t getFd(int64_t fd);
 ProcessInfo *ps(uint16_t *proccesQty);
 
 int16_t copyProcess(ProcessInfo *dest, ProcessContext *src);
+
+void priority_reset(ProcessContext *p, schedulerADT scheduler);
+
+void aging(ProcessContext *p, schedulerADT scheduler);
+
+uint64_t nextscheduled(uint64_t prevRSP, schedulerADT scheduler);
 
 #endif

@@ -12,6 +12,7 @@ typedef enum { READY, RUNNING, BLOCKED, TERMINATED } ProcessState;
 typedef struct ProcessContext {
 	char *name;
 	uint8_t priority;
+	uint8_t basePriority; 
 	int16_t pid;
 	int16_t parentPid;
 

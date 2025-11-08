@@ -432,7 +432,6 @@ pid_t handle_test_processes(char *arg, int stdin, int stdout) {
 	} else {
 		argc = 2;
 	}
-
     pid_t pid = sys_createProcess((uint64_t) run_test_processes, argv, argc, priority, ground, fds);
 	return !ground ? pid : 0;
 }

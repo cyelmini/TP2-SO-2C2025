@@ -16,6 +16,7 @@ int initializeProcess(ProcessContext *process, int16_t pid, char **args, int arg
 	process->argc = argc;
 	process->name = NULL;
 	process->priority = priority;
+	process->basePriority = priority;
 	process->pid = pid;
 	process->rip = rip;
 	process->ground = ground;
@@ -185,7 +186,7 @@ static char **allocArgv(char **argv, int argc) {
 }
 
 int changePriority(int16_t pid, uint8_t priority) {
-	if (priority > MAX_PRIORITY || priority < MIN_PRIORITY) {
+	if (priority > LOWEST_PRIORITY || priority < HIGHEST_PRIORITY) {
 		return -1;
 	}
 
@@ -193,6 +194,24 @@ int changePriority(int16_t pid, uint8_t priority) {
 	if (process == NULL) {
 		return -1;
 	}
-	process->priority = priority;
-	return priority;
+	
+	schedulerADT s = getScheduler();
+
+    if (process->status == READY && s != NULL) {
+        int oldIdx = process->priority - 1;
+        int newIdx = priority - 1;
+
+        if (removeNode(s->readyQueues[oldIdx], process) == NULL) {
+            printf("changePriority: removeNode failed for pid %d\n", pid); 
+        }
+        process->priority = priority;
+        process->basePriority = priority; 
+        addNode(s->readyQueues[newIdx], process);
+    } else {
+    
+        process->priority = priority;
+        process->basePriority = priority;
+    }
+
+    return priority;
 }
