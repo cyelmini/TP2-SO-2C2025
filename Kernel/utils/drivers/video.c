@@ -53,7 +53,7 @@ struct vbe_mode_info_structure {
 } __attribute__((packed));
 
 struct vbe_mode_info_structure *_screenData = (void *) 0x5C00;
-uint16_t _X = 0, _Y = 0;			  /* Coordenadas de escritura de caracteres */
+uint16_t _X = 0, _Y = 0;			  /* Coordenadas de escritura de caracteres */		// PVS falso positivo, los nombres cortos de las variables son literalmente las coordenadas (x,y) de la pantalla
 Color _fontColor = DEFAULT_COLOR;	  /* Color de fuente */
 uint8_t _charWidth = CHAR_WIDTH_12;	  /* Ancho en pixeles de un caracter */
 uint8_t _charHeight = CHAR_HEIGHT_12; /* Altura en pixeles de un caracter */

@@ -7,5 +7,4 @@
 
 pid_t handle_mvar(char **argv, int argc, int ground, int stdin, int stdout);
 
-
 #endif // MVAR

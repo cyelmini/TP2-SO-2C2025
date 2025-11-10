@@ -62,7 +62,6 @@ int main() {
 
 	initializeKeyboardDriver();
 	
-	// proceso shell
 	char *argsShell[1] = {"shell"};
 	int16_t fileDescriptors[] = {STDIN, STDOUT, STDERR};
 	createProcess((uint64_t) sampleCodeModuleAddress, argsShell, 1, MAX_PRIORITY, fileDescriptors, 0);

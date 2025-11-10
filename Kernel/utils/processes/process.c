@@ -24,7 +24,6 @@ int initializeProcess(ProcessContext *process, int16_t pid, char **args, int arg
 	process->ground = ground;
 	process->waitingList = NULL;
 	process->status = READY;
-	process->quantumTicks = 0;
 
 	process->stackBase = (uint64_t) mm_alloc(STACK_SIZE);
 	if (process->stackBase == 0) {

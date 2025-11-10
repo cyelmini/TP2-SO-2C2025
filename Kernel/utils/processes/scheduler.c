@@ -32,7 +32,6 @@ void createScheduler() {
 	scheduler->currentProcess = NULL;
 	scheduler->processQty = 0;
 	scheduler->quantums = MIN_QUANTUMS;
-	scheduler->globalTicks = 0;
 
 	created = 1;
 

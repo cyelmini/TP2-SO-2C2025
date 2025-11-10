@@ -3,7 +3,6 @@
 
 #include "include/shell.h"
 #include "include/libasm.h"
-#include "include/man.h"
 #include "include/builtinFunctions.h"
 #include "include/processFunctions.h"
 #include "include/mvar.h"
@@ -106,7 +105,6 @@ static int split_args(char *args, char **out_argv) {
 				args++;
 		}
 	}
-	/* Null-terminate remaining entries if any */
 	for (int i = argc; i < MAX_ARGS; i++)
 		argv[i] = NULL;
 	return argc;
@@ -117,14 +115,12 @@ static void separate_cmds(char ** argv, char ** cmd1, char ** cmd2){
 
 	int sep = str_in_list("|", argv, MAX_ARGS);
 
-	/* copy before separator into cmd1 */
 	int c = 0;
 	for (int j = 0; j < sep && j < MAX_ARGS; j++) {
 		cmd1[c++] = argv[j];
 	}
 	cmd1[c] = NULL;
 
-	/* copy after separator into cmd2 */
 	c = 0;
 	for (int j = sep + 1; j < MAX_ARGS && argv[j]; j++) {
 		cmd2[c++] = argv[j];
@@ -133,31 +129,27 @@ static void separate_cmds(char ** argv, char ** cmd1, char ** cmd2){
 }
 
 static int check_fore(char ** argv, int * argc){
-	if (!argv || !argc || *argc <= 0) return 1; // default foreground
+	if (!argv || !argc || *argc <= 0) return 1; 
 	int res = argv[*argc - 1] && argv[*argc - 1][0] == '&';
 	if(res){
 		argv[*argc - 1] = NULL;
 		*argc -= 1;
 	}
-	return !res; // return 1 for foreground, 0 for background
+	return !res; 
 }
 
 static void remove_name(char **argv, int *argc) {
 	if (!argv || !argc) return;
 	if (*argc <= 0) return;
 
-	/* shift left */
 	for (int i = 0; i < (*argc) - 1 && i < MAX_ARGS - 1; i++) {
 		argv[i] = argv[i+1];
 	}
 
-	/* last slot becomes NULL */
 	int last = (*argc) - 1;
-	if (last >= 0 && last < MAX_ARGS) argv[last] = NULL;
+	if (last < MAX_ARGS) argv[last] = NULL;
 
-	/* decrement argc */
 	(*argc)--;
-	if (*argc < 0) *argc = 0;
 }
 
 static void handle_piped_commands(pipeCmd *pipe_cmd) {
@@ -187,7 +179,7 @@ static void handle_piped_commands(pipeCmd *pipe_cmd) {
 		return;
 	}
 	
-	// Crear ambos procesos
+	// crear ambos procesos
 	// cmd1 lee de stdin (0) y escribe al pipe
 	// cmd2 lee del pipe y escribe a stdout (1)
 	pid_t pids[2];
@@ -201,7 +193,7 @@ static void handle_piped_commands(pipeCmd *pipe_cmd) {
 	sys_waitProcess(pids[1]);
 	sys_mm_free(pipe_cmd->cmd2.arguments);
 	
-	// Cerrar el pipe
+	// cerrar el pipe
 	sys_pipe_close(pipe_fd);
 	sys_mm_free(pipe_cmd);
 }
@@ -223,7 +215,7 @@ static void handle_process_command(char ** argv, int argc, int inst_n){
 static command set_cmd(char ** argv){
 	command cmd;
 	int c = 0;
-	while (argv && argv[c] != NULL && c < MAX_ARGS) c++;
+	while (argv && c < MAX_ARGS && argv[c] != NULL) c++;
 	int argc = c;
 	int ground = check_fore(argv, &argc);
 	cmd.argc = argc;
@@ -254,7 +246,7 @@ void run_shell() {
 		int argc = split_args(line, argv);
 		if (argc == 0) { continue; }
 
-		/* comando con pipes */
+		// comando con pipes 
 		if (str_in_list("|", argv, MAX_ARGS) != -1) {
 			pipeCmd *pipecmds = (pipeCmd *) sys_mm_alloc(sizeof(pipeCmd));
 			if (!pipecmds) {
@@ -273,7 +265,7 @@ void run_shell() {
 			continue;
 		}
 
-		/* comando sin pipes */
+		// comando sin pipes 
 		int instruction_n = str_in_list(argv[0], instruction_list, CANT_INSTRUCTIONS);
 		if (instruction_n == -1) {
 			printErr("Comando invalido, ejecuta 'help' para conocer los comandos\n");

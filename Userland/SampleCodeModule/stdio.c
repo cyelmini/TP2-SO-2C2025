@@ -70,17 +70,12 @@ static void vprintf(char *fmt, va_list args) {
                     putchar(va_arg(args, int));
                 } break;
 
-                case 'd': { // decimal (con signo, pero imprimimos igual con itoa)
+                case 'd': // decimal (con signo, pero imprimimos igual con itoa)
+				case 'u':
                     len = itoa(va_arg(args, uint64_t), buffer, 10);
                     printNChars('0', dx - len);
                     puts(buffer);
-                } break;
-
-                case 'u': { // unsigned
-                    len = itoa(va_arg(args, uint64_t), buffer, 10);
-                    printNChars('0', dx - len);
-                    puts(buffer);
-                } break;
+                break;
 
                 case 'x': {
                     len = itoa(va_arg(args, uint64_t), buffer, 16);
@@ -164,7 +159,7 @@ int scanf(char *fmt, ...) {
 	bIdx = 0;
 
 	int qtyParams = 0;
-	while (*fmtPtr && buffer[bIdx] && bIdx < MAX_CHARS) {
+	while (bIdx < MAX_CHARS && *fmtPtr && buffer[bIdx]) {
 		if (*fmtPtr == '%') {
 			fmtPtr++;
 			switch (*fmtPtr) {

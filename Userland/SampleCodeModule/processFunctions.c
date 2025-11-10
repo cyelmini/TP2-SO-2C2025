@@ -31,7 +31,6 @@ pid_t handle_clear(char **argv, int argc, int ground, int stdin, int stdout) {
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
 
-	/* create process using provided argv/argc */
 	pid_t pid = sys_createProcess((uint64_t) clear, argv, argc > 0 ? argc : 1, priority, (char)(!ground), fds);
 	return ground ? pid : 0 ;
 }

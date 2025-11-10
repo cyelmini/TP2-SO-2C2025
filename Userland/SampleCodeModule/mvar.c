@@ -9,37 +9,29 @@
 #include "include/syscalls.h"
 #include "include/shared.h"
 #include "include/test_util.h"
+#include "include/color.h"
 #include <stdint.h>
 #include <stdbool.h>
 
 #define MVAR_SEM_PRINT 93
-
 #define MIN_PAUSE_STEPS 1
 #define PAUSE_SPREAD_STEPS 4
-
 #define MVAR_VALUE_BYTES 1
+#define READER_PALETTE_SIZE 6
 
-/* single value pipe descriptor is enough; no struct needed */
+static const struct {
+    Color color;
+    const char *name;
+} 
 
-static const Color reader_palette[] = {
-	{0, 0, 255},
-	{0, 255, 0},
-	{255, 0, 0},
-	{0, 255, 255},
-	{255, 0, 255},
-	{255, 255, 255}
+reader_palette[READER_PALETTE_SIZE] = {
+    {RED, "red"},
+    {LIGHT_GREEN, "light-green"},
+    {DARK_GREEN, "dark-green"},
+    {PINK, "pink"},
+    {MAGENTA, "magenta"},
+    {SILVER, "silver"}
 };
-
-static const char *const reader_palette_names[] = {
-	"red",
-	"green",
-	"blue",
-	"yellow",
-	"magenta",
-	"white"
-};
-
-#define READER_PALETTE_SIZE (sizeof(reader_palette) / sizeof(reader_palette[0]))
 
 static uint64_t mvar_manager(int argc, char **argv);
 static uint64_t mvar_writer(int argc, char **argv);
@@ -70,10 +62,9 @@ static char writer_value(int writer_id) {
 
 static Color reader_color(int reader_id) {
 	if (READER_PALETTE_SIZE == 0) {
-		Color fallback = {255, 255, 255};
-		return fallback;
+		return BLACK; 
 	}
-	return reader_palette[reader_id % READER_PALETTE_SIZE];
+	return reader_palette[reader_id % READER_PALETTE_SIZE].color;
 }
 
 static bool pipe_write_all(int pipe_id, const char *buffer, int byte_count) {
@@ -105,9 +96,9 @@ static void log_spawn_error(const char *role, int id) {
 }
 
 static void spawn_writer(int id, int value_pipe_id, int16_t descriptors[], uint8_t priority, char background) {
-	char writer_id_buf[12];  /* e.g., "3" */
-	char value_pipe_buf[12]; /* e.g., pipe descriptor "42" */
-	char name_buf[16];       /* e.g., "writer-D" */
+	char writer_id_buf[12];  
+	char value_pipe_buf[12]; 
+	char name_buf[16];       
 	char *writer_argv[4];
 
 	compose_writer_args(id, value_pipe_id, name_buf, writer_id_buf, value_pipe_buf, writer_argv);
@@ -120,9 +111,9 @@ static void spawn_writer(int id, int value_pipe_id, int16_t descriptors[], uint8
 }
 
 static void spawn_reader(int id, int value_pipe_id, int16_t descriptors[], uint8_t priority, char background) {
-	char reader_id_buf[12];  /* e.g., "5" */
-	char value_pipe_buf[12]; /* e.g., pipe descriptor "42" */
-	char name_buf[24];       /* e.g., "reader-blue" */
+	char reader_id_buf[12];  
+	char value_pipe_buf[12]; 
+	char name_buf[24];      
 	char *reader_argv[4];
 	compose_reader_args(id, value_pipe_id, name_buf, reader_id_buf, value_pipe_buf, reader_argv);
 
@@ -147,7 +138,7 @@ static void compose_writer_args(int id, int value_pipe_id, char *name_buf, char 
 }
 
 static void compose_reader_args(int id, int value_pipe_id, char *name_buf, char *reader_id_buf, char *value_pipe_buf, char *argv_out[]) {
-	const char *reader_label = reader_palette_names[id % READER_PALETTE_SIZE];
+	const char *reader_label = reader_palette[id % READER_PALETTE_SIZE].name;
 	itoa((uint64_t) id, reader_id_buf, 10);
 	itoa((uint64_t) value_pipe_id, value_pipe_buf, 10);
 	strcpy(name_buf, "reader-");

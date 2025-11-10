@@ -61,64 +61,35 @@
 #define PIPE_CLOSE 35
 
 static uint8_t syscall_read(uint32_t fd);
-
 static void syscall_write(uint32_t fd, char c);
-
 static void syscall_clear();
-
 static uint32_t syscall_seconds();
-
 static uint32_t syscall_minutes();
-
 static uint32_t syscall_hours();
-
 static uint64_t *syscall_registerArray(uint64_t *regarr);
-
 static void syscall_fontSize(uint8_t size);
-
 static uint32_t syscall_resolution();
-
 static uint64_t syscall_getTicks();
-
 static void syscall_getMemory(uint64_t pos, uint8_t *vec);
-
 static void syscall_setFontColor(uint8_t r, uint8_t g, uint8_t b);
-
 static uint32_t syscall_getFontColor();
-
 static void *syscall_mm_alloc(size_t size);
-
 static void syscall_mm_free(void *const restrict ptr);
-
 static void syscall_mm_info(mem_t *info);
-
 static uint64_t syscall_create_process(uint64_t rip, char **args, int argc, uint8_t priority, char ground,
 									   int16_t fileDescriptors[]);
-
 static uint64_t syscall_getPid();
-
 static ProcessInfo *syscall_process_info(uint16_t *processQty);
-
 static void syscall_exit();
-
 static void syscall_sleep(uint32_t s);
-
 static int64_t syscall_sem_init(int id, uint32_t value);
-
 static int64_t syscall_sem_open(int id);
-
 static int64_t syscall_sem_wait(int id);
-
 static int64_t syscall_sem_post(int id);
-
 static int64_t syscall_sem_close(int id);
-
 static int64_t syscall_pipe_create();
-
 static int64_t syscall_pipe_read(int pipe_id, char *buffer, int size);
-
 static int64_t syscall_pipe_write(int pipe_id, const char *buffer, int size);
-
 static int64_t syscall_pipe_close(int pipe_id);
 
 typedef uint64_t (*syscall)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);

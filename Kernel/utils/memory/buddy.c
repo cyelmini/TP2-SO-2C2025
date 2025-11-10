@@ -1,16 +1,6 @@
 // This is a personal academic project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
-/* ----------------------
- * Buddy Memory Manager
- * ----------------------
- * Administra memoria dividiéndola en bloques de tamaño potencia de 2
- * - Al reservar: se busca el bloque más chico que alcance el pedido,
- *   si es más grande, se divide en dos "buddies"
- * - Al liberar: se fusiona con su buddy libre para formar bloques mayores
- * Usa listas por orden (potencia de 2) para asignar y fusionar bloques rapido
- */
-
 #include "../../include/memoryManagement.h"
 
 #define FREE 0

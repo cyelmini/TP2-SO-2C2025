@@ -1,16 +1,6 @@
 // This is a personal academic project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
-/* ----------------------
- * Bitmap Memory Manager
- * ----------------------
- * Implementa un gestor de memoria usando un bitmap
- *
- * La idea es dividir la memoria en bloques de tamaño fijo de 64 bytes.
- * Por cada bloque existe una posición en el bitmap (array de 0 y 1)
- * que indica si ese bloque está libre (0) u ocupado (1)
- */
-
 #include "../../include/memoryManagement.h"
 #include <stdint.h>
 #include <string.h>

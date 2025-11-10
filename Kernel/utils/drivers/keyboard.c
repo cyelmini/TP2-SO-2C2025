@@ -67,8 +67,6 @@ void keyboardHandler() {
 				print("^D");
 				printNewline();
 				writeKey(EOF);
-			} else if (key == HOTKEY) {
-				saveRegisters();
 			}
 		} else if (_bufferSize < BUFFER_CAPACITY - 1) {
 			if (_shift) {
@@ -98,7 +96,7 @@ char getScancode() {
 char getAscii() {
 	int scanCode;
 	
-	sem_wait(KEYBOARD_SEM_ID);
+	sem_wait(KEYBOARD_SEM_ID);		// PVS falso positivo, no pasamos null pointer a la funcion, es un ID
 	
 	scanCode = getScancode();
 	
@@ -116,6 +114,6 @@ static void writeKey(char key) {
 	if (((key & 0x7F) < sizeof(charHexMap) && charHexMap[key & 0x7F] != 0) || (int)key == EOF) {
 		_buffer[getBufferIndex(_bufferSize)] = key;
 		_bufferSize++;
-		sem_post(KEYBOARD_SEM_ID);
+		sem_post(KEYBOARD_SEM_ID);		// PVS falso positivo, no pasamos null pointer a la funcion, es un ID
 	}
 }

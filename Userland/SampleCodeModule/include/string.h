@@ -35,14 +35,28 @@ int strcpy(char *dest, const char *origin);
  */
 int strlen(const char *str);
 
-/*
- * Busca el primer caracter 'c' en la cadena 's' y devuelve
- * un puntero a su posicion o NULL si no se encuentra.
+/**
+ * @brief Busca un carácter específico en una cadena
+ * @param s Cadena en la que buscar
+ * @param c Carácter a buscar
+ * @return Puntero a la primera ocurrencia del carácter o NULL si no se encuentra
  */
 char *find_char(const char *s, char c);
 
+/**
+ * @brief Busca una cadena en una lista de cadenas
+ * @param needle Cadena a buscar
+ * @param list Array de cadenas donde buscar
+ * @param list_len Longitud de la lista
+ * @return 1 si la cadena está en la lista, 0 si no está
+ */
 int str_in_list(const char *needle, char *list[], int list_len);
 
+/**
+ * @brief Convierte una cadena a un número entero sin signo de 32 bits
+ * @param str Cadena a convertir
+ * @return Valor numérico convertido
+ */
 uint32_t str_to_uint32(char *str);
 
 #endif
