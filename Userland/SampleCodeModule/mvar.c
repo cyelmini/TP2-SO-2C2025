@@ -5,27 +5,26 @@
 #include "include/string.h"
 #include "include/syscalls.h"
 #include "include/shared.h"
+#include "include/test_util.h"
 #include <stdint.h>
+#include <stdbool.h>
 
-/* Identificadores reservados para los semaforos utilizados por la MVar */
-#define MVAR_SEM_EMPTY 90
-#define MVAR_SEM_FULL 91
-#define MVAR_SEM_MUTEX 92
 #define MVAR_SEM_PRINT 93
 
-/* Estado compartido de la celda MVar */
-static volatile char mvar_cell = 0;
-static volatile uint32_t mvar_total_writers = 0;
-static volatile uint32_t mvar_total_readers = 0;
+#define MIN_PAUSE_STEPS 1
+#define PAUSE_SPREAD_STEPS 4
 
-/* Paleta de colores para distinguir lectores en la salida */
+#define MVAR_VALUE_BYTES 1
+
+/* single value pipe descriptor is enough; no struct needed */
+
 static const Color reader_palette[] = {
-	{0, 0, 255},      /* Red */
-	{0, 255, 0},      /* Green */
-	{255, 0, 0},      /* Blue */
-	{0, 255, 255},    /* Yellow */
-	{255, 0, 255},    /* Magenta */
-	{255, 255, 255}   /* White */
+	{0, 0, 255},
+	{0, 255, 0},
+	{255, 0, 0},
+	{0, 255, 255},
+	{255, 0, 255},
+	{255, 255, 255}
 };
 
 static const char *const reader_palette_names[] = {
@@ -42,35 +41,31 @@ static const char *const reader_palette_names[] = {
 static uint64_t mvar_manager(int argc, char **argv);
 static uint64_t mvar_writer(int argc, char **argv);
 static uint64_t mvar_reader(int argc, char **argv);
-static void random_busy_wait(uint32_t salt);
-static char writer_value(uint32_t writer_id);
-static Color reader_color(uint32_t reader_id);
-static int init_semaphores(void);
-static void destroy_semaphores(void);
 
-static void random_busy_wait(uint32_t salt) {
-	uint64_t ticks = sys_getTicks();
-	uint64_t mix = ((ticks << 3) ^ (salt * 1103515245u + 12345u));
-	uint64_t loops = (mix % 40000u) + 20000u;
-	volatile uint64_t sink = 0;
-	for (uint64_t i = 0; i < loops; i++) {
-		sink += i;
+static void random_pause(void);
+static char writer_value(int writer_id);
+static Color reader_color(int reader_id);
+static bool pipe_write_all(int pipe_id, const char *buffer, int byte_count);
+static bool pipe_read_all(int pipe_id, char *buffer, int byte_count);
+static int ensure_print_semaphore(void);
+static void log_spawn_error(const char *role, int id);
+static void spawn_writer(int id, int value_pipe_id, int16_t descriptors[], uint8_t priority, char background);
+static void spawn_reader(int id, int value_pipe_id, int16_t descriptors[], uint8_t priority, char background);
+static void compose_writer_args(int id, int value_pipe_id, char *name_buf, char *writer_id_buf, char *value_pipe_buf, char *argv_out[]);
+static void compose_reader_args(int id, int value_pipe_id, char *name_buf, char *reader_id_buf, char *value_pipe_buf, char *argv_out[]);
+
+static void random_pause(void) {
+	int spins = MIN_PAUSE_STEPS + (int) getUniform(PAUSE_SPREAD_STEPS);
+	while (spins-- > 0) {
+		sys_yield();
 	}
 }
 
-static char writer_value(uint32_t writer_id) {
-	if (writer_id < 26) {
-		return (char) ('A' + writer_id);
-	}
-	writer_id -= 26;
-	if (writer_id < 26) {
-		return (char) ('a' + writer_id);
-	}
-	writer_id -= 26;
-	return (char) ('0' + (writer_id % 10));
+static char writer_value(int writer_id) {
+	return (char) ('A' + (writer_id % 26));
 }
 
-static Color reader_color(uint32_t reader_id) {
+static Color reader_color(int reader_id) {
 	if (READER_PALETTE_SIZE == 0) {
 		Color fallback = {255, 255, 255};
 		return fallback;
@@ -78,31 +73,87 @@ static Color reader_color(uint32_t reader_id) {
 	return reader_palette[reader_id % READER_PALETTE_SIZE];
 }
 
-static void destroy_semaphores(void) {
-	sys_sem_destroy(MVAR_SEM_EMPTY);
-	sys_sem_destroy(MVAR_SEM_FULL);
-	sys_sem_destroy(MVAR_SEM_MUTEX);
-	sys_sem_destroy(MVAR_SEM_PRINT);
+static bool pipe_write_all(int pipe_id, const char *buffer, int byte_count) {
+	if (pipe_id < 0 || buffer == NULL || byte_count <= 0) {
+		return false;
+	}
+	return sys_pipe_write(pipe_id, buffer, byte_count) == byte_count;
 }
 
-static int init_semaphores(void) {
-	destroy_semaphores();
-	if (sys_sem_create(MVAR_SEM_EMPTY, 1) != 0) {
-		return -1;
+static bool pipe_read_all(int pipe_id, char *buffer, int byte_count) {
+	if (pipe_id < 0 || buffer == NULL || byte_count <= 0) {
+		return false;
 	}
-	if (sys_sem_create(MVAR_SEM_FULL, 0) != 0) {
-		destroy_semaphores();
-		return -1;
+	return sys_pipe_read(pipe_id, buffer, byte_count) == byte_count;
+}
+
+static int ensure_print_semaphore(void) {
+	sys_sem_destroy(MVAR_SEM_PRINT);
+	return sys_sem_create(MVAR_SEM_PRINT, 1);
+}
+
+static void log_spawn_error(const char *role, int id) {
+	if (sys_sem_wait(MVAR_SEM_PRINT) == 0) {
+		printf("[mvar] Error al crear %s %u.\n", (char *) role, (uint64_t) id);
+		sys_sem_post(MVAR_SEM_PRINT);
+	} else {
+		printf("[mvar] Error al crear %s %u.\n", (char *) role, (uint64_t) id);
 	}
-	if (sys_sem_create(MVAR_SEM_MUTEX, 1) != 0) {
-		destroy_semaphores();
-		return -1;
+}
+
+static void spawn_writer(int id, int value_pipe_id, int16_t descriptors[], uint8_t priority, char background) {
+	char writer_id_buf[12];  /* e.g., "3" */
+	char value_pipe_buf[12]; /* e.g., pipe descriptor "42" */
+	char name_buf[16];       /* e.g., "writer-D" */
+	char *writer_argv[4];
+
+	compose_writer_args(id, value_pipe_id, name_buf, writer_id_buf, value_pipe_buf, writer_argv);
+
+	pid_t pid = (pid_t) sys_createProcess((uint64_t) mvar_writer, writer_argv, 3,
+		priority, background, descriptors);
+	if (pid < 0) {
+		log_spawn_error("escritor", id);
 	}
-	if (sys_sem_create(MVAR_SEM_PRINT, 1) != 0) {
-		destroy_semaphores();
-		return -1;
+}
+
+static void spawn_reader(int id, int value_pipe_id, int16_t descriptors[], uint8_t priority, char background) {
+	char reader_id_buf[12];  /* e.g., "5" */
+	char value_pipe_buf[12]; /* e.g., pipe descriptor "42" */
+	char name_buf[24];       /* e.g., "reader-blue" */
+	char *reader_argv[4];
+	compose_reader_args(id, value_pipe_id, name_buf, reader_id_buf, value_pipe_buf, reader_argv);
+
+	pid_t pid = (pid_t) sys_createProcess((uint64_t) mvar_reader, reader_argv, 3,
+		priority, background, descriptors);
+	if (pid < 0) {
+		log_spawn_error("lector", id);
 	}
-	return 0;
+}
+
+static void compose_writer_args(int id, int value_pipe_id, char *name_buf, char *writer_id_buf, char *value_pipe_buf, char *argv_out[]) {
+	itoa((uint64_t) id, writer_id_buf, 10);
+	itoa((uint64_t) value_pipe_id, value_pipe_buf, 10);
+	strcpy(name_buf, "writer-");
+	name_buf[7] = writer_value(id);
+	name_buf[8] = '\0';
+
+	argv_out[0] = name_buf;
+	argv_out[1] = writer_id_buf;
+	argv_out[2] = value_pipe_buf;
+	argv_out[3] = NULL;
+}
+
+static void compose_reader_args(int id, int value_pipe_id, char *name_buf, char *reader_id_buf, char *value_pipe_buf, char *argv_out[]) {
+	const char *reader_label = reader_palette_names[id % READER_PALETTE_SIZE];
+	itoa((uint64_t) id, reader_id_buf, 10);
+	itoa((uint64_t) value_pipe_id, value_pipe_buf, 10);
+	strcpy(name_buf, "reader-");
+	strcpy(name_buf + 7, reader_label);
+
+	argv_out[0] = name_buf;
+	argv_out[1] = reader_id_buf;
+	argv_out[2] = value_pipe_buf;
+	argv_out[3] = NULL;
 }
 
 static uint64_t mvar_manager(int argc, char **argv) {
@@ -112,68 +163,37 @@ static uint64_t mvar_manager(int argc, char **argv) {
 		return -1;
 	}
 
-	uint32_t writers = str_to_uint32(argv[1]);
-	uint32_t readers = str_to_uint32(argv[2]);
-	if (writers == 0 || readers == 0) {
+	int writer_count = (int) str_to_uint32(argv[1]);
+	int reader_count = (int) str_to_uint32(argv[2]);
+	if (writer_count == 0 || reader_count == 0) {
 		printf("Uso: mvar <writers> <readers> (valores > 0)\n");
 		sys_exit();
 		return -1;
 	}
 
-	mvar_total_writers = writers;
-	mvar_total_readers = readers;
-	mvar_cell = 0;
-
-	if (init_semaphores() != 0) {
-		printf("[mvar] Error inicializando semaforos.\n");
+	if (ensure_print_semaphore() != 0) {
+		printf("[mvar] Error creando semaforo de impresion.\n");
 		sys_exit();
 		return -1;
 	}
 
-	int16_t fds[] = {STDIN, STDOUT, STDERR};
-	uint8_t proc_priority = 3;
-	char background = 1;
-
-	for (uint32_t i = 0; i < writers; i++) {
-		char id_buf[12];
-		itoa((uint64_t) i, id_buf, 10);
-		char name_buf[16];
-		strcpy(name_buf, "writer-");
-		name_buf[7] = writer_value(i);
-		name_buf[8] = '\0';
-		char *writer_args[] = {name_buf, id_buf, NULL};
-
-		pid_t pid = (pid_t) sys_createProcess((uint64_t) mvar_writer, writer_args, 2,
-			proc_priority, background, fds);
-		if (pid < 0) {
-			if (sys_sem_wait(MVAR_SEM_PRINT) == 0) {
-				printf("[mvar] Error al crear escritor %u.\n", (uint64_t) i);
-				sys_sem_post(MVAR_SEM_PRINT);
-			} else {
-				printf("[mvar] Error al crear escritor %u.\n", (uint64_t) i);
-			}
-		}
+	int value_pipe_id = sys_pipe_create();
+	if (value_pipe_id < 0) {
+		printf("[mvar] Error creando pipe principal.\n");
+		sys_exit();
+		return -1;
 	}
 
-	for (uint32_t i = 0; i < readers; i++) {
-		char id_buf[12];
-		itoa((uint64_t) i, id_buf, 10);
-		const char *label = reader_palette_names[i % READER_PALETTE_SIZE];
-		char name_buf[24];
-		strcpy(name_buf, "reader-");
-		strcpy(name_buf + 7, label);
-		char *reader_args[] = {name_buf, id_buf, NULL};
+	int16_t io_descriptors[] = {STDIN, STDOUT, STDERR};
+	uint8_t process_priority = 3;
+	char background = 1;
 
-		pid_t pid = (pid_t) sys_createProcess((uint64_t) mvar_reader, reader_args, 2,
-			proc_priority, background, fds);
-		if (pid < 0) {
-			if (sys_sem_wait(MVAR_SEM_PRINT) == 0) {
-				printf("[mvar] Error al crear lector %u.\n", (uint64_t) i);
-				sys_sem_post(MVAR_SEM_PRINT);
-			} else {
-				printf("[mvar] Error al crear lector %u.\n", (uint64_t) i);
-			}
-		}
+	for (int i = 0; i < writer_count; i++) {
+		spawn_writer(i, value_pipe_id, io_descriptors, process_priority, background);
+	}
+
+	for (int i = 0; i < reader_count; i++) {
+		spawn_reader(i, value_pipe_id, io_descriptors, process_priority, background);
 	}
 
 	sys_exit();
@@ -181,28 +201,22 @@ static uint64_t mvar_manager(int argc, char **argv) {
 }
 
 static uint64_t mvar_writer(int argc, char **argv) {
-	if (argc < 2 || argv == NULL || argv[1] == NULL) {
+	if (argc < 3 || argv == NULL || argv[1] == NULL || argv[2] == NULL) {
 		sys_exit();
 		return -1;
 	}
 
-	uint32_t writer_id = str_to_uint32(argv[1]);
+	int writer_id = (int) str_to_uint32(argv[1]);
+	int value_pipe = atoi(argv[2]);
+	char produced_value;
 
 	while (1) {
-		random_busy_wait(writer_id + 1);
+		random_pause();
 
-		if (sys_sem_wait(MVAR_SEM_EMPTY) != 0) {
+		produced_value = writer_value(writer_id);
+		if (!pipe_write_all(value_pipe, &produced_value, MVAR_VALUE_BYTES)) {
 			break;
 		}
-		if (sys_sem_wait(MVAR_SEM_MUTEX) != 0) {
-			sys_sem_post(MVAR_SEM_EMPTY);
-			break;
-		}
-
-		mvar_cell = writer_value(writer_id);
-
-		sys_sem_post(MVAR_SEM_MUTEX);
-		sys_sem_post(MVAR_SEM_FULL);
 	}
 
 	sys_exit();
@@ -210,39 +224,31 @@ static uint64_t mvar_writer(int argc, char **argv) {
 }
 
 static uint64_t mvar_reader(int argc, char **argv) {
-	if (argc < 2 || argv == NULL || argv[1] == NULL) {
+	if (argc < 3 || argv == NULL || argv[1] == NULL || argv[2] == NULL) {
 		sys_exit();
 		return -1;
 	}
 
-	uint32_t reader_id = str_to_uint32(argv[1]);
-	Color color = reader_color(reader_id);
+	int reader_id = (int) str_to_uint32(argv[1]);
+	int value_pipe = atoi(argv[2]);
+	Color reader_font = reader_color(reader_id);
+	char consumed_value;
 
 	while (1) {
-		random_busy_wait(reader_id + mvar_total_writers + 7);
+		random_pause();
 
-		if (sys_sem_wait(MVAR_SEM_FULL) != 0) {
+		if (!pipe_read_all(value_pipe, &consumed_value, MVAR_VALUE_BYTES)) {
 			break;
 		}
-		if (sys_sem_wait(MVAR_SEM_MUTEX) != 0) {
-			sys_sem_post(MVAR_SEM_FULL);
-			break;
-		}
-
-		char value = mvar_cell;
-		mvar_cell = 0;
-
-		sys_sem_post(MVAR_SEM_MUTEX);
-		sys_sem_post(MVAR_SEM_EMPTY);
 
 		if (sys_sem_wait(MVAR_SEM_PRINT) != 0) {
 			break;
 		}
 
-		Color previous = sys_getFontColor();
-		sys_setFontColor(color.r, color.g, color.b);
-		putchar(value);
-		sys_setFontColor(previous.r, previous.g, previous.b);
+		Color previous_font = sys_getFontColor();
+		sys_setFontColor(reader_font.r, reader_font.g, reader_font.b);
+		putchar(consumed_value);
+		sys_setFontColor(previous_font.r, previous_font.g, previous_font.b);
 
 		sys_sem_post(MVAR_SEM_PRINT);
 	}
@@ -257,16 +263,21 @@ pid_t handle_mvar(char **argv, int argc, int ground, int stdin, int stdout) {
 		return -1;
 	}
 
-	uint32_t writers = str_to_uint32(argv[1]);
-	uint32_t readers = str_to_uint32(argv[2]);
-	if (writers == 0 || readers == 0) {
+	int writer_count = (int) str_to_uint32(argv[1]);
+	int reader_count = (int) str_to_uint32(argv[2]);
+	if (writer_count == 0 || reader_count == 0) {
 		printf("Uso: mvar <writers> <readers> (valores > 0)\n");
 		return -1;
 	}
 
-	int16_t fds[] = {stdin, stdout, STDERR};
+	if (writer_count > 26) {
+		printf("Uso: mvar <writers> <readers> (max writers = 26)\n");
+		return -1;
+	}
+
+	int16_t descriptors[] = {stdin, stdout, STDERR};
 	uint8_t priority = 2;
-	pid_t pid = (pid_t) sys_createProcess((uint64_t) mvar_manager, argv, argc,
-			priority, (char) (!ground), fds);
-	return ground ? pid : 0;
+	pid_t manager_pid = (pid_t) sys_createProcess((uint64_t) mvar_manager, argv, argc,
+			priority, (char) (!ground), descriptors);
+	return ground ? manager_pid : 0;
 }
