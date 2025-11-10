@@ -15,3 +15,7 @@
 
 #Bash history
 .bash_history
+
+#PVS-Studio reports
+pvs-report.log
+pvs-report-html/
