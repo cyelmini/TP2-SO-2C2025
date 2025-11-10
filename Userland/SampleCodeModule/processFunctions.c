@@ -216,6 +216,11 @@ static uint64_t run_test_mm(int argc, char **argv) {
 /* ------------------------ TEST_PROCESSES ------------------------ */
 
 pid_t handle_test_processes(char **argv, int argc, int ground, int stdin, int stdout) {
+	if (argc < 2 || !argv[1]) {
+		printf("Uso: testproc <max_processes>\n");
+		return -1;
+	}
+	
 	int16_t fds[] = {stdin, stdout, STDERR};
 	uint8_t priority = 1;
 
