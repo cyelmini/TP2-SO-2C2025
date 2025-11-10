@@ -3,17 +3,6 @@
 x64BareBones es una base minimalista para desarrollar sistemas operativos sobre la arquitectura Intel x86_64.
 El objetivo es ofrecer un kernel bootstrappeado por Pure64, cargar modulos adicionales y facilitar la experimentacion con sincronizacion, planificacion y administracion de memoria en un entorno reproducible.
 
-## Caracteristicas clave
-- Toolchain reproducible provisto mediante Docker (`compile.sh`).
-
-- Kernel modular con loader propio y soporte para modulos de usuario.
-
-- Userland de ejemplo con sincronizacion basada en pipes y un set de tests de laboratorio.
-
-- Integracion opcional con PVS-Studio para analisis estatico automatizado.
-
-- Scripts auxiliares para generar imagenes de disco (`Image/`) y ejecutar en QEMU (`run.sh`).
-
 ## Instrucciones de compilacion y ejecucion
 
 ### Requisitos
@@ -115,11 +104,11 @@ run.sh                   # Ejecuta la imagen resultante en QEMU
 
 - `mvar 2 2` para observar sincronizacion con la variable compartida.
 
-- `testsync 10 1` vs `testsync 500 0` para comparar ejecucion con y sin semaforos.
+- `testsync 10 1` vs `testsync 10 0` para comparar ejecucion con y sin semaforos.
 
 ### Requerimientos faltantes o parcialmente implementados
 Al día de la entrega no hay requerimientos faltantes ni parcialmente implementados.
-Todos los puntos solicitados en el enunciado fueron implementados y verificados en este repositorio.
+Todos los puntos solicitados en el enunciado fueron implementados y verificados.
 
 ## Limitaciones
 - La shell es minimalista: no hay autocompletado ni historial de comandos.
