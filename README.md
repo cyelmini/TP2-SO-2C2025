@@ -8,12 +8,11 @@ El objetivo es ofrecer un kernel bootstrappeado por Pure64, cargar modulos adici
 ### Requisitos
 - `nasm`
 - `qemu-system-x86_64`
+- `docker`
 - `gcc`
 - `make`
 
-Como alternativa, el contenedor `agodio/itba-so-multi-platform:3.0` ya incluye las dependencias y es el camino recomendado para evitar diferencias de entorno.
-
-### Flujo recomendado con Docker
+### Flujo recomendado 
 ```bash
 # Compilar toolchain y kernel (bitmap manager por defecto)
 ./compile.sh
@@ -33,22 +32,27 @@ Como alternativa, el contenedor `agodio/itba-so-multi-platform:3.0` ya incluye l
 ./compile.sh --pvs
 ```
 El comando genera `pvs-report.log` y la version HTML en `pvs-report-html/index.html`. 
-Antes de relanzar el analisis conviene borrar `pvs-report-html/` para regenerar la salida limpia.
+Antes de relanzar el analisis hay que borrar `pvs-report-html/` para regenerar la salida limpia.
 
 ### Compilacion manual 
+Para compilar de manera manual se debe crear un contenedor en Docker con la imagen `agodio/itba-so-multi-platform:3.0` parados en el directorio deseado, con los comandos:
 ```bash
+docker pull agodio/itba-so-multi-platform:3.0
+docker run -d -v ${PWD}:/root --security-opt seccomp:unconfined -it --name <NOMBRE> agodio/itba-so-multi-platform:3.0
+```
+Donde <NOMBRE> es el nombre deseado para el contenedor. Luego, para compilar:
+
+```bash
+docker exec -it <NOMBRE> bash
+
 cd Toolchain
 make all
 
 cd ..
 make all
-```
 
-### Ejecucion del kernel sin Docker
-```bash
-./run.sh
+exit
 ```
-El script levanta QEMU utilizando la imagen generada en `Image/`.
 
 ## Estructura del repositorio
 ```
