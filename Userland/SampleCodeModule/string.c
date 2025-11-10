@@ -31,13 +31,13 @@ int strcpychar(char *dest, const char *origin, char limit) {
 }
 
 int strlen(const char *s) {
-    size_t len = 0;
-    if (!s)
-        return 0;
-    while (s[len] != '\0') {
-        len++;
-    }
-    return len;
+	size_t len = 0;
+	if (!s)
+		return 0;
+	while (s[len] != '\0') {
+		len++;
+	}
+	return len;
 }
 
 char *find_char(const char *s, char c) {
@@ -52,7 +52,8 @@ char *find_char(const char *s, char c) {
 }
 
 int str_in_list(const char *needle, char *list[], int list_len) {
-	if (!needle || !list || list_len <= 0) return 0;
+	if (!needle || !list || list_len <= 0)
+		return 0;
 	for (int i = 0; i < list_len; i++) {
 		if (list[i] && strcmp(needle, list[i]) == 0)
 			return i;
@@ -61,29 +62,28 @@ int str_in_list(const char *needle, char *list[], int list_len) {
 }
 
 static int my_isdigit(char c) {
-    return (c >= '0' && c <= '9');
+	return (c >= '0' && c <= '9');
 }
 
 uint32_t str_to_uint32(char *str) {
-    uint32_t result = 0;
-    int i = 0;
-    int hasDigit = 0;
+	uint32_t result = 0;
+	int i = 0;
+	int hasDigit = 0;
 
-    while (str[i] == ' ' || str[i] == '\t')
-        i++;
+	while (str[i] == ' ' || str[i] == '\t')
+		i++;
 
-    while (my_isdigit(str[i])) {
-        hasDigit = 1;
-        result = result * 10 + (str[i] - '0');
-        i++;
-    }
+	while (my_isdigit(str[i])) {
+		hasDigit = 1;
+		result = result * 10 + (str[i] - '0');
+		i++;
+	}
 
-    while (str[i] == ' ' || str[i] == '\t')
-        i++;
+	while (str[i] == ' ' || str[i] == '\t')
+		i++;
 
-    if (!hasDigit || str[i] != '\0')
-        return -1;
+	if (!hasDigit || str[i] != '\0')
+		return -1;
 
-    return result;
+	return result;
 }
-

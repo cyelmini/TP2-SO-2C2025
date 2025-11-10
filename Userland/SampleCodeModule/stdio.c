@@ -42,7 +42,7 @@ int getchar() {
 	if (c == 0xFF) {
 		return -1;
 	}
-	return (int)c;
+	return (int) c;
 }
 
 char getScanCode() {
@@ -57,47 +57,48 @@ void printf(char *fmt, ...) {
 }
 
 static void vprintf(char *fmt, va_list args) {
-    char buffer[MAX_CHARS] = {0};
-    char *fmtPtr = fmt;
-    while (*fmtPtr) {
-        if (*fmtPtr == '%') {
-            fmtPtr++;
-            int dx = strtoi(fmtPtr, &fmtPtr);
-            int len;
+	char buffer[MAX_CHARS] = {0};
+	char *fmtPtr = fmt;
+	while (*fmtPtr) {
+		if (*fmtPtr == '%') {
+			fmtPtr++;
+			int dx = strtoi(fmtPtr, &fmtPtr);
+			int len;
 
-            switch (*fmtPtr) {
-                case 'c': {
-                    putchar(va_arg(args, int));
-                } break;
+			switch (*fmtPtr) {
+				case 'c': {
+					putchar(va_arg(args, int));
+				} break;
 
-                case 'd': // decimal (con signo, pero imprimimos igual con itoa)
+				case 'd': // decimal (con signo, pero imprimimos igual con itoa)
 				case 'u':
-                    len = itoa(va_arg(args, uint64_t), buffer, 10);
-                    printNChars('0', dx - len);
-                    puts(buffer);
-                break;
+					len = itoa(va_arg(args, uint64_t), buffer, 10);
+					printNChars('0', dx - len);
+					puts(buffer);
+					break;
 
-                case 'x': {
-                    len = itoa(va_arg(args, uint64_t), buffer, 16);
-                    printNChars('0', dx - len);
-                    puts(buffer);
-                } break;
+				case 'x': {
+					len = itoa(va_arg(args, uint64_t), buffer, 16);
+					printNChars('0', dx - len);
+					puts(buffer);
+				} break;
 
-                case 's': {
-                    printNChars(' ', dx); 
-                    puts((char *) va_arg(args, char *));
-                } break;
+				case 's': {
+					printNChars(' ', dx);
+					puts((char *) va_arg(args, char *));
+				} break;
 
-                default: {
-                    // si llega un especificador desconocido, imprimimos el carácter tal cual
-                    putchar(*fmtPtr);
-                } break;
-            }
-        } else {
-            putchar(*fmtPtr);
-        }
-        fmtPtr++;
-    }
+				default: {
+					// si llega un especificador desconocido, imprimimos el carácter tal cual
+					putchar(*fmtPtr);
+				} break;
+			}
+		}
+		else {
+			putchar(*fmtPtr);
+		}
+		fmtPtr++;
+	}
 }
 
 void printfc(Color color, char *fmt, ...) {
@@ -194,40 +195,41 @@ int scanf(char *fmt, ...) {
 }
 
 int read_line(char *dst, int maxlen) {
-    if (dst == NULL || maxlen <= 1) return 0;
+	if (dst == NULL || maxlen <= 1)
+		return 0;
 
-    int len = 0;
+	int len = 0;
 
-    for (;;) {
-        int c = getchar();
+	for (;;) {
+		int c = getchar();
 
-        if (c == 0) {                
-            sys_yield();             
-            continue;
-        }
+		if (c == 0) {
+			sys_yield();
+			continue;
+		}
 
-        if (c == '\n') {             
-            putchar('\n');          
-            break;
-        }
+		if (c == '\n') {
+			putchar('\n');
+			break;
+		}
 
-        if (c == '\b') {             
-            if (len > 0) {
-                putchar('\b');
-                putchar(' ');
-                putchar('\b');
-                len--;
-            }
-            continue;
-        }
+		if (c == '\b') {
+			if (len > 0) {
+				putchar('\b');
+				putchar(' ');
+				putchar('\b');
+				len--;
+			}
+			continue;
+		}
 
-        if (len < maxlen - 1) {      
-            dst[len++] = (char)c;
-            putchar((char)c);        
-        }
-    }
-    dst[len] = '\0';
-    return len;
+		if (len < maxlen - 1) {
+			dst[len++] = (char) c;
+			putchar((char) c);
+		}
+	}
+	dst[len] = '\0';
+	return len;
 }
 
 static char *_regNames[] = {"RAX", "RBX", "RCX", "RDX", "RBP", "RDI", "RSI", "R8",

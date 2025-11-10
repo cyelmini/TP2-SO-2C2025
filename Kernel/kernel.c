@@ -5,12 +5,12 @@
 #include "include/lib.h"
 #include "include/memoryManagement.h"
 #include "include/moduleLoader.h"
-#include "include/scheduler.h"
-#include "include/video.h"
-#include "include/semaphore.h"
 #include "include/pipes.h"
-#include <stdint.h>
+#include "include/scheduler.h"
+#include "include/semaphore.h"
+#include "include/video.h"
 #include "keyboard.h"
+#include <stdint.h>
 
 extern uint8_t text;
 extern uint8_t rodata;
@@ -52,20 +52,21 @@ int main() {
 	memoryManager = mm_create(memoryManagerModuleAddress, HEAP_SIZE);
 
 	createScheduler();
-	
+
 	if (initSemaphoreManager() == NULL) {
 		print("Hubo un error al inicializar los semaforos.");
-		while(1) _hlt(); 
+		while (1)
+			_hlt();
 	}
 
 	initializePipeManager();
 
 	initializeKeyboardDriver();
-	
+
 	char *argsShell[1] = {"shell"};
 	int16_t fileDescriptors[] = {STDIN, STDOUT, STDERR};
 	createProcess((uint64_t) sampleCodeModuleAddress, argsShell, 1, MAX_PRIORITY, fileDescriptors, 0);
-	
+
 	_sti();
 
 	while (1)

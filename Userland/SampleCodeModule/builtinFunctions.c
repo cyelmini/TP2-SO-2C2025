@@ -2,15 +2,14 @@
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
 #include "include/builtinFunctions.h"
+#include "include/shared.h"
 #include "include/shell.h"
 #include "include/stdio.h"
 #include "include/stdlib.h"
 #include "include/string.h"
 #include "include/syscalls.h"
 #include "include/tests.h"
-#include "include/shared.h"
 #include <stdint.h>
-
 
 /* ------------------------ Funciones built-in de la shell ------------------------ */
 
@@ -21,44 +20,44 @@ void bi_help(int argc, char **argv) {
 	}
 
 	const char *manual =
-    "-------------COMENTARIOS-------------\n"
-    "Para ejecutar un proceso en segundo plano, escriba '&' al final del comando.\n"
-    "Para conectar dos procesos mediante un pipe, utilice el simbolo '|'.\n\n"
+		"-------------COMENTARIOS-------------\n"
+		"Para ejecutar un proceso en segundo plano, escriba '&' al final del comando.\n"
+		"Para conectar dos procesos mediante un pipe, utilice el simbolo '|'.\n\n"
 
-    "-------------BUILT-INS-------------\n"
-    "help               Muestra el listado de comandos disponibles. Uso: help\n"
-    "font-size          Cambia el tamaño de la fuente. Uso: font-size <n>\n"
-    "block              Bloquea un proceso dado su ID. Uso: block <pid>\n"
-    "unblock            Desbloquea un proceso dado su ID. Uso: unblock <pid>\n"
-    "kill               Mata un proceso dado su ID. Uso: kill <pid>\n"
-    "nice               Cambia la prioridad de un proceso dado su ID y la nueva prioridad.\n"
-    "                   Uso: nice <pid> <priority>\n"
-    "mem                Muestra el estado de la memoria: total, ocupada y libre. Uso: mem\n\n"
+		"-------------BUILT-INS-------------\n"
+		"help               Muestra el listado de comandos disponibles. Uso: help\n"
+		"font-size          Cambia el tamaño de la fuente. Uso: font-size <n>\n"
+		"block              Bloquea un proceso dado su ID. Uso: block <pid>\n"
+		"unblock            Desbloquea un proceso dado su ID. Uso: unblock <pid>\n"
+		"kill               Mata un proceso dado su ID. Uso: kill <pid>\n"
+		"nice               Cambia la prioridad de un proceso dado su ID y la nueva prioridad.\n"
+		"                   Uso: nice <pid> <priority>\n"
+		"mem                Muestra el estado de la memoria: total, ocupada y libre. Uso: mem\n\n"
 
-    "-------------APLICACIONES DE USUARIO-------------\n"
-    "clear              Limpia completamente la pantalla. Uso: clear\n"
-    "ps                 Lista todos los procesos en ejecucion con sus propiedades. Uso: ps\n"
-    "loop               Imprime su ID con un saludo cada cierta cantidad de segundos.\n"
-    "                   Uso: loop <seconds>\n"
-    "cat                Imprime el contenido recibido por la entrada estandar (stdin) o de un archivo.\n"
-    "                   Uso: cat [archivo]\n"
-    "wc                 Cuenta la cantidad de lineas recibidas por la entrada estandar. Uso: wc\n"
-    "filter             Filtra las vocales del texto recibido por la entrada estandar. Uso: filter\n"
-    "mvar               Simula multiples lectores y escritores sobre una variable compartida.\n"
-    "                   Uso: mvar <iteraciones> <lectores> <escritores>\n"
-    "                   - <iteraciones>: numero de operaciones por proceso\n"
-    "                   - <lectores>, <escritores>: cantidad de procesos lectores/escritores a crear\n\n"
+		"-------------APLICACIONES DE USUARIO-------------\n"
+		"clear              Limpia completamente la pantalla. Uso: clear\n"
+		"ps                 Lista todos los procesos en ejecucion con sus propiedades. Uso: ps\n"
+		"loop               Imprime su ID con un saludo cada cierta cantidad de segundos.\n"
+		"                   Uso: loop <seconds>\n"
+		"cat                Imprime el contenido recibido por la entrada estandar (stdin) o de un archivo.\n"
+		"                   Uso: cat [archivo]\n"
+		"wc                 Cuenta la cantidad de lineas recibidas por la entrada estandar. Uso: wc\n"
+		"filter             Filtra las vocales del texto recibido por la entrada estandar. Uso: filter\n"
+		"mvar               Simula multiples lectores y escritores sobre una variable compartida.\n"
+		"                   Uso: mvar <iteraciones> <lectores> <escritores>\n"
+		"                   - <iteraciones>: numero de operaciones por proceso\n"
+		"                   - <lectores>, <escritores>: cantidad de procesos lectores/escritores a crear\n\n"
 
-    "-------------TESTS DEL SISTEMA-------------\n"
-    "testmem            Prueba el administrador de memoria fisica. Uso: testmem\n"
-    "testproc           Crea, bloquea, desbloquea y mata procesos dummy aleatoriamente. Uso: testproc\n"
-    "testprio           Crea 3 procesos que incrementan una variable desde 0 hasta un valor dado.\n"
-    "                   Uso: testprio <tope>\n"
-    "testsync           Prueba la sincronizacion usando semaforos. Uso: testsync <iteraciones> <usar_sem>\n"
-    "                   - <iteraciones>: numero de incrementos/decrementos por proceso\n"
-    "                   - <usar_sem>: 1 = con semaforos (resultado estable), 0 = sin semaforos (race condition)\n"
-    "\n";
-	
+		"-------------TESTS DEL SISTEMA-------------\n"
+		"testmem            Prueba el administrador de memoria fisica. Uso: testmem\n"
+		"testproc           Crea, bloquea, desbloquea y mata procesos dummy aleatoriamente. Uso: testproc\n"
+		"testprio           Crea 3 procesos que incrementan una variable desde 0 hasta un valor dado.\n"
+		"                   Uso: testprio <tope>\n"
+		"testsync           Prueba la sincronizacion usando semaforos. Uso: testsync <iteraciones> <usar_sem>\n"
+		"                   - <iteraciones>: numero de incrementos/decrementos por proceso\n"
+		"                   - <usar_sem>: 1 = con semaforos (resultado estable), 0 = sin semaforos (race condition)\n"
+		"\n";
+
 	printf("%s", manual);
 }
 
@@ -76,35 +75,36 @@ void bi_fontSize(int argc, char **argv) {
 }
 
 void bi_block(int argc, char **argv) {
-    if (argc < 1 || argv[0] == NULL) {
-        printf("Uso: block <pid>\n");
-        return;
-    }
+	if (argc < 1 || argv[0] == NULL) {
+		printf("Uso: block <pid>\n");
+		return;
+	}
 
-    pid_t pid = (pid_t) atoi(argv[0]);
-    pid_t shellPid = (pid_t) sys_getPid();   
+	pid_t pid = (pid_t) atoi(argv[0]);
+	pid_t shellPid = (pid_t) sys_getPid();
 
-    // proteger idle/shell
-    if (pid == 0 || pid == 1 || pid == shellPid) {
-        printf("Error: no se puede bloquear la shell ni el proceso idle.\n");
-        return;
-    }
+	// proteger idle/shell
+	if (pid == 0 || pid == 1 || pid == shellPid) {
+		printf("Error: no se puede bloquear la shell ni el proceso idle.\n");
+		return;
+	}
 
-    int rc = sys_blockProcess(pid);
-    if (rc == -1) {
-        printf("Error al bloquear el proceso %d\n", (int)pid);
-    } else {
-        printf("Proceso %d bloqueado correctamente\n", (int)pid);
-    }
+	int rc = sys_blockProcess(pid);
+	if (rc == -1) {
+		printf("Error al bloquear el proceso %d\n", (int) pid);
+	}
+	else {
+		printf("Proceso %d bloqueado correctamente\n", (int) pid);
+	}
 }
 
 void bi_unblock(int argc, char **argv) {
-    if (argc < 1 || argv[0] == NULL) {
-        printf("Uso: unblock <pid>\n");
-        return;
-    }
-    pid_t pid = (pid_t) atoi(argv[0]);
-    sys_setReadyProcess(pid);
+	if (argc < 1 || argv[0] == NULL) {
+		printf("Uso: unblock <pid>\n");
+		return;
+	}
+	pid_t pid = (pid_t) atoi(argv[0]);
+	sys_setReadyProcess(pid);
 }
 
 void bi_kill(int argc, char **argv) {
@@ -113,7 +113,7 @@ void bi_kill(int argc, char **argv) {
 		return;
 	}
 	pid_t pid = (pid_t) atoi(argv[0]);
-	if(pid <= 1){
+	if (pid <= 1) {
 		printf("PID debe ser mayor que 1\n");
 		return;
 	}
@@ -121,27 +121,27 @@ void bi_kill(int argc, char **argv) {
 }
 
 void bi_nice(int argc, char **argv) {
-    if (argc < 2 || argv[0] == NULL || argv[1] == NULL) {
-        printf("Uso: nice <pid> <priority>\n");
-        return;
-    }
+	if (argc < 2 || argv[0] == NULL || argv[1] == NULL) {
+		printf("Uso: nice <pid> <priority>\n");
+		return;
+	}
 
-    pid_t pid = (pid_t) atoi(argv[0]);
-    int priority = (int) strtoi(argv[1], NULL);
+	pid_t pid = (pid_t) atoi(argv[0]);
+	int priority = (int) strtoi(argv[1], NULL);
 
-    if (pid == 0 || pid == 1) {
-        printf("No se pueden cambiar las prioridades de idle o de la shell.\n");
-        return;
-    }
-    if (priority < MIN_PRIORITY || priority > MAX_PRIORITY) {
-        printf("Prioridad invalida (rango %d..%d)\n", MIN_PRIORITY, MAX_PRIORITY);
-        return;
-    }
+	if (pid == 0 || pid == 1) {
+		printf("No se pueden cambiar las prioridades de idle o de la shell.\n");
+		return;
+	}
+	if (priority < MIN_PRIORITY || priority > MAX_PRIORITY) {
+		printf("Prioridad invalida (rango %d..%d)\n", MIN_PRIORITY, MAX_PRIORITY);
+		return;
+	}
 
-    int out = sys_changePriority(pid, priority);
-    if (out == -1) {
-        printf("Proceso %d no encontrado\n", (int)pid);
-    }
+	int out = sys_changePriority(pid, priority);
+	if (out == -1) {
+		printf("Proceso %d no encontrado\n", (int) pid);
+	}
 }
 
 void bi_mem(int argc) {

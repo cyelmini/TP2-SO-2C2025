@@ -3,25 +3,25 @@
 
 #include "semaphore.h"
 
-#define MAX_PIPES 16           
-#define PIPE_BUFFER_SIZE 512    
+#define MAX_PIPES 16
+#define PIPE_BUFFER_SIZE 512
 
 typedef struct {
-    char buffer[PIPE_BUFFER_SIZE];  
-    int readIdx;                    
-    int writeIdx;                  
-    int count;                       
-    int semReaders;                  
-    int semWriters;                  
-    int mutex;         
-    int readers;             
-    int writers;             
-    int isOpen;            
+	char buffer[PIPE_BUFFER_SIZE];
+	int readIdx;
+	int writeIdx;
+	int count;
+	int semReaders;
+	int semWriters;
+	int mutex;
+	int readers;
+	int writers;
+	int isOpen;
 } pipe_t;
 
 typedef struct {
-    pipe_t pipes[MAX_PIPES]; // vector de pipes
-    int next_pipe_id;
+	pipe_t pipes[MAX_PIPES]; // vector de pipes
+	int next_pipe_id;
 } pipeManager;
 
 /**

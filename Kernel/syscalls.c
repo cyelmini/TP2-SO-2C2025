@@ -1,17 +1,14 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-
 #include "include/color.h"
 #include "include/keyboard.h"
 #include "include/lib.h"
 #include "include/memory.h"
 #include "include/memoryManagement.h"
+#include "include/pipes.h"
 #include "include/process.h"
 #include "include/scheduler.h"
+#include "include/semaphore.h"
 #include "include/time.h"
 #include "include/video.h"
-#include "include/semaphore.h"
-#include "include/pipes.h"
 #include <stdint.h>
 
 #define SYSCALL_COUNT 36
@@ -61,35 +58,64 @@
 #define PIPE_CLOSE 35
 
 static uint8_t syscall_read(uint32_t fd);
+
 static void syscall_write(uint32_t fd, char c);
+
 static void syscall_clear();
+
 static uint32_t syscall_seconds();
+
 static uint32_t syscall_minutes();
+
 static uint32_t syscall_hours();
+
 static uint64_t *syscall_registerArray(uint64_t *regarr);
+
 static void syscall_fontSize(uint8_t size);
+
 static uint32_t syscall_resolution();
+
 static uint64_t syscall_getTicks();
+
 static void syscall_getMemory(uint64_t pos, uint8_t *vec);
+
 static void syscall_setFontColor(uint8_t r, uint8_t g, uint8_t b);
+
 static uint32_t syscall_getFontColor();
+
 static void *syscall_mm_alloc(size_t size);
+
 static void syscall_mm_free(void *const restrict ptr);
+
 static void syscall_mm_info(mem_t *info);
+
 static uint64_t syscall_create_process(uint64_t rip, char **args, int argc, uint8_t priority, char ground,
 									   int16_t fileDescriptors[]);
+
 static uint64_t syscall_getPid();
+
 static ProcessInfo *syscall_process_info(uint16_t *processQty);
+
 static void syscall_exit();
+
 static void syscall_sleep(uint32_t s);
+
 static int64_t syscall_sem_init(int id, uint32_t value);
+
 static int64_t syscall_sem_open(int id);
+
 static int64_t syscall_sem_wait(int id);
+
 static int64_t syscall_sem_post(int id);
+
 static int64_t syscall_sem_close(int id);
+
 static int64_t syscall_pipe_create();
+
 static int64_t syscall_pipe_read(int pipe_id, char *buffer, int size);
+
 static int64_t syscall_pipe_write(int pipe_id, const char *buffer, int size);
+
 static int64_t syscall_pipe_close(int pipe_id);
 
 typedef uint64_t (*syscall)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
@@ -142,17 +168,17 @@ uint64_t syscallDispatcher(uint64_t nr, uint64_t arg0, uint64_t arg1, uint64_t a
 
 static uint8_t syscall_read(uint32_t fd) {
 	int16_t realFd = getFd(fd);
-	
+
 	// si es un pipe (FD >= 3), leer del pipe
 	if (realFd >= 3) {
 		char buffer;
 		int64_t bytesRead = readPipe(realFd, &buffer, 1);
 		if (bytesRead <= 0) {
-			return (uint8_t)(-1);  
+			return (uint8_t) (-1);
 		}
-		return (uint8_t)buffer;
+		return (uint8_t) buffer;
 	}
-	
+
 	switch (realFd) {
 		case STDIN:
 			return getAscii();
@@ -164,18 +190,18 @@ static uint8_t syscall_read(uint32_t fd) {
 
 static void syscall_write(uint32_t fd, char c) {
 	int16_t realFd = getFd(fd);
-	
+
 	// si es un pipe (FD >= 3), escribir al pipe
 	if (realFd >= 3) {
 		writePipe(realFd, &c, 1);
 		return;
 	}
-	
+
 	// si es STDOUT o STDERR estandar, NO escribir EOF a pantalla
-	if ((char)c == (char)-1) {
-		return; 
-	} 
-	
+	if ((char) c == (char) -1) {
+		return;
+	}
+
 	Color prevColor = getFontColor();
 	if (realFd == STDERR)
 		setFontColor(ERROR_COLOR);
@@ -265,13 +291,18 @@ static ProcessInfo *syscall_process_info(uint16_t *processQty) {
 }
 
 static void syscall_exit() {
-	char eof = (char)-1;
-	syscall_write(STDOUT, eof);
+	// Si STDOUT es un pipe, decrementar writers para señalar EOF
+	int16_t stdout_fd = getFd(STDOUT);
+	if (stdout_fd >= 3) {
+		closePipe(stdout_fd);
+		yield(); // Dar oportunidad al lector de despertar
+	}
+
 	killCurrentProcess();
 	yield();
 }
 
-static void syscall_sleep(uint32_t s){
+static void syscall_sleep(uint32_t s) {
 	if (s == 0) {
 		return;
 	}
@@ -331,4 +362,3 @@ static int64_t syscall_pipe_write(int pipe_id, const char *buffer, int size) {
 static int64_t syscall_pipe_close(int pipe_id) {
 	return closePipe(pipe_id);
 }
-

@@ -18,11 +18,11 @@ int64_t test_processes(uint64_t argc, char *argv[]) {
 	uint8_t action;
 	uint64_t max_processes;
 	char *argvAux[] = {"endless_loop"};
-	int16_t fileDescriptors[] = {STDIN, STDOUT, STDERR}; // stdin, stdout, stderr
+	int16_t fileDescriptors[] = {STDIN, STDOUT, STDERR};
 
 	if (argc != 2)
 		return -1;
-	
+
 	if ((max_processes = satoi(argv[1])) <= 0)
 		return -1;
 
@@ -31,7 +31,7 @@ int64_t test_processes(uint64_t argc, char *argv[]) {
 	while (1) {
 		for (rq = 0; rq < max_processes; rq++) {
 			p_rqs[rq].pid = sys_createProcess((uint64_t) endless_loop, argvAux, 1, 1, 1, fileDescriptors);
-			
+
 			if (p_rqs[rq].pid == -1) {
 				printf("test_processes: ERROR creating process\n");
 				return -1;

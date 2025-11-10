@@ -72,7 +72,8 @@ uint64_t schedule(uint64_t prevRSP) {
 			freeProcess(scheduler->currentProcess);
 			scheduler->currentProcess = NULL;
 			scheduler->currentPid = NO_PROCESS;
-		} else {
+		}
+		else {
 			scheduler->currentProcess->stackPos = prevRSP;
 			if (scheduler->currentProcess->status == RUNNING) {
 				scheduler->currentProcess->status = READY;
@@ -86,7 +87,8 @@ uint64_t schedule(uint64_t prevRSP) {
 		ProcessContext *idle = findProcess(IDLE_PID);
 		if (idle == NULL) {
 			return prevRSP;
-		} else {
+		}
+		else {
 			scheduler->currentProcess = idle;
 			scheduler->currentPid = idle->pid;
 			scheduler->quantums = idle->priority;
@@ -119,29 +121,30 @@ int16_t createProcess(uint64_t rip, char **args, int argc, uint8_t priority, int
 
 	memset(newProcess, 0, sizeof(ProcessContext));
 
-	//encontrar minimo pid libre
+	// encontrar minimo pid libre
 	int16_t pid;
 	for (pid = 0; pid < MAX_PROCESS; pid++) {
-    	if (findProcess(pid) == NULL) {
-        	break;
-    	}
+		if (findProcess(pid) == NULL) {
+			break;
+		}
 	}
 	if (pid == MAX_PROCESS) {
-    	/* no free pid found */
-    	freeProcess(newProcess);
-    	return -1;
+		/* no free pid found */
+		freeProcess(newProcess);
+		return -1;
 	}
 
 	/* ahora inicializar con pid */
 	if (initializeProcess(newProcess, pid, args, argc, priority, rip, ground, fileDescriptors) == -1) {
-    	freeProcess(newProcess);
-    	return -1;
+		freeProcess(newProcess);
+		return -1;
 	}
 
 	addNode(scheduler->processList, newProcess);
 	if (newProcess->status == READY) {
 		addNode(scheduler->readyProcess, newProcess);
-	} else if (newProcess->status == BLOCKED) {
+	}
+	else if (newProcess->status == BLOCKED) {
 		addNode(scheduler->blockedProcess, newProcess);
 	}
 
@@ -389,7 +392,7 @@ static int64_t kill(schedulerADT scheduler, ProcessContext *process) {
 	ProcessContext *aux;
 	while (hasNext(process->waitingList)) {
 		aux = nextInList(process->waitingList);
-		if(aux != NULL) {
+		if (aux != NULL) {
 			setReadyProcess(aux->pid);
 		}
 	}
@@ -399,7 +402,7 @@ static int64_t kill(schedulerADT scheduler, ProcessContext *process) {
 	process->status = TERMINATED;
 	scheduler->processQty--;
 
-	if(scheduler->currentProcess != process){
+	if (scheduler->currentProcess != process) {
 		freeProcess(process);
 	}
 

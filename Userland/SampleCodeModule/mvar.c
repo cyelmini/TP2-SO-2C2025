@@ -1,17 +1,17 @@
 // This is a personal academic project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
-#include "include/shell.h"
+#include "include/color.h"
 #include "include/processFunctions.h"
+#include "include/shared.h"
+#include "include/shell.h"
 #include "include/stdio.h"
 #include "include/stdlib.h"
 #include "include/string.h"
 #include "include/syscalls.h"
-#include "include/shared.h"
 #include "include/test_util.h"
-#include "include/color.h"
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #define MVAR_SEM_PRINT 93
 #define MIN_PAUSE_STEPS 1
@@ -20,18 +20,12 @@
 #define READER_PALETTE_SIZE 6
 
 static const struct {
-    Color color;
-    const char *name;
-} 
+	Color color;
+	const char *name;
+}
 
-reader_palette[READER_PALETTE_SIZE] = {
-    {RED, "red"},
-    {LIGHT_GREEN, "light-green"},
-    {DARK_GREEN, "dark-green"},
-    {PINK, "pink"},
-    {MAGENTA, "magenta"},
-    {SILVER, "silver"}
-};
+reader_palette[READER_PALETTE_SIZE] = {{RED, "red"},   {LIGHT_GREEN, "light-green"}, {DARK_GREEN, "dark-green"},
+									   {PINK, "pink"}, {MAGENTA, "magenta"},		 {SILVER, "silver"}};
 
 static uint64_t mvar_manager(int argc, char **argv);
 static uint64_t mvar_writer(int argc, char **argv);
@@ -46,8 +40,10 @@ static int ensure_print_semaphore(void);
 static void log_spawn_error(const char *role, int id);
 static void spawn_writer(int id, int value_pipe_id, int16_t descriptors[], uint8_t priority, char background);
 static void spawn_reader(int id, int value_pipe_id, int16_t descriptors[], uint8_t priority, char background);
-static void compose_writer_args(int id, int value_pipe_id, char *name_buf, char *writer_id_buf, char *value_pipe_buf, char *argv_out[]);
-static void compose_reader_args(int id, int value_pipe_id, char *name_buf, char *reader_id_buf, char *value_pipe_buf, char *argv_out[]);
+static void compose_writer_args(int id, int value_pipe_id, char *name_buf, char *writer_id_buf, char *value_pipe_buf,
+								char *argv_out[]);
+static void compose_reader_args(int id, int value_pipe_id, char *name_buf, char *reader_id_buf, char *value_pipe_buf,
+								char *argv_out[]);
 
 static void random_pause(void) {
 	int spins = MIN_PAUSE_STEPS + (int) getUniform(PAUSE_SPREAD_STEPS);
@@ -62,7 +58,7 @@ static char writer_value(int writer_id) {
 
 static Color reader_color(int reader_id) {
 	if (READER_PALETTE_SIZE == 0) {
-		return BLACK; 
+		return BLACK;
 	}
 	return reader_palette[reader_id % READER_PALETTE_SIZE].color;
 }
@@ -90,41 +86,41 @@ static void log_spawn_error(const char *role, int id) {
 	if (sys_sem_wait(MVAR_SEM_PRINT) == 0) {
 		printf("[mvar] Error al crear %s %u.\n", (char *) role, (uint64_t) id);
 		sys_sem_post(MVAR_SEM_PRINT);
-	} else {
+	}
+	else {
 		printf("[mvar] Error al crear %s %u.\n", (char *) role, (uint64_t) id);
 	}
 }
 
 static void spawn_writer(int id, int value_pipe_id, int16_t descriptors[], uint8_t priority, char background) {
-	char writer_id_buf[12];  
-	char value_pipe_buf[12]; 
-	char name_buf[16];       
+	char writer_id_buf[12];
+	char value_pipe_buf[12];
+	char name_buf[16];
 	char *writer_argv[4];
 
 	compose_writer_args(id, value_pipe_id, name_buf, writer_id_buf, value_pipe_buf, writer_argv);
 
-	pid_t pid = (pid_t) sys_createProcess((uint64_t) mvar_writer, writer_argv, 3,
-		priority, background, descriptors);
+	pid_t pid = (pid_t) sys_createProcess((uint64_t) mvar_writer, writer_argv, 3, priority, background, descriptors);
 	if (pid < 0) {
 		log_spawn_error("escritor", id);
 	}
 }
 
 static void spawn_reader(int id, int value_pipe_id, int16_t descriptors[], uint8_t priority, char background) {
-	char reader_id_buf[12];  
-	char value_pipe_buf[12]; 
-	char name_buf[24];      
+	char reader_id_buf[12];
+	char value_pipe_buf[12];
+	char name_buf[24];
 	char *reader_argv[4];
 	compose_reader_args(id, value_pipe_id, name_buf, reader_id_buf, value_pipe_buf, reader_argv);
 
-	pid_t pid = (pid_t) sys_createProcess((uint64_t) mvar_reader, reader_argv, 3,
-		priority, background, descriptors);
+	pid_t pid = (pid_t) sys_createProcess((uint64_t) mvar_reader, reader_argv, 3, priority, background, descriptors);
 	if (pid < 0) {
 		log_spawn_error("lector", id);
 	}
 }
 
-static void compose_writer_args(int id, int value_pipe_id, char *name_buf, char *writer_id_buf, char *value_pipe_buf, char *argv_out[]) {
+static void compose_writer_args(int id, int value_pipe_id, char *name_buf, char *writer_id_buf, char *value_pipe_buf,
+								char *argv_out[]) {
 	itoa((uint64_t) id, writer_id_buf, 10);
 	itoa((uint64_t) value_pipe_id, value_pipe_buf, 10);
 	strcpy(name_buf, "writer-");
@@ -137,7 +133,8 @@ static void compose_writer_args(int id, int value_pipe_id, char *name_buf, char 
 	argv_out[3] = NULL;
 }
 
-static void compose_reader_args(int id, int value_pipe_id, char *name_buf, char *reader_id_buf, char *value_pipe_buf, char *argv_out[]) {
+static void compose_reader_args(int id, int value_pipe_id, char *name_buf, char *reader_id_buf, char *value_pipe_buf,
+								char *argv_out[]) {
 	const char *reader_label = reader_palette[id % READER_PALETTE_SIZE].name;
 	itoa((uint64_t) id, reader_id_buf, 10);
 	itoa((uint64_t) value_pipe_id, value_pipe_buf, 10);
@@ -271,7 +268,7 @@ pid_t handle_mvar(char **argv, int argc, int ground, int stdin, int stdout) {
 
 	int16_t descriptors[] = {stdin, stdout, STDERR};
 	uint8_t priority = 2;
-	pid_t manager_pid = (pid_t) sys_createProcess((uint64_t) mvar_manager, argv, argc,
-			priority, (char) (!ground), descriptors);
+	pid_t manager_pid =
+		(pid_t) sys_createProcess((uint64_t) mvar_manager, argv, argc, priority, (char) (!ground), descriptors);
 	return ground ? manager_pid : 0;
 }

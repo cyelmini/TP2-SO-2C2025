@@ -9,7 +9,7 @@
 
 typedef struct command {
 	int instruction;
-	char ** arguments;
+	char **arguments;
 	int argc;
 	char ground; // 1 si es foreground, 0 si es background
 } command;

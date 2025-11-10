@@ -1,22 +1,22 @@
 #ifndef SEMAPHORES_H
 #define SEMAPHORES_H
 
-#include <stdint.h>
 #include "doubleLinkedList.h"
+#include <stdint.h>
 
-#define NUM_SEMS 128            
+#define NUM_SEMS 128
 
 typedef struct semaphore_t {
-    doubleLinkedListADT waitQueue; 
-    uint32_t counter;          
-    uint8_t spinlock;            
-    uint8_t active;             
+	doubleLinkedListADT waitQueue;
+	uint32_t counter;
+	uint8_t spinlock;
+	uint8_t active;
 } semaphore_t;
 
 typedef struct SemaphoreCDT *SemaphoreADT;
 
 typedef struct SemaphoreCDT {
-    semaphore_t semaphores[NUM_SEMS]; 
+	semaphore_t semaphores[NUM_SEMS];
 } SemaphoreCDT;
 
 /**

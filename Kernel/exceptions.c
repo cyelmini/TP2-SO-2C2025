@@ -1,8 +1,8 @@
 // This is a personal academic project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
 
-#include "include/memory.h"
 #include "include/color.h"
+#include "include/memory.h"
 #include "include/video.h"
 #include <stdint.h>
 
